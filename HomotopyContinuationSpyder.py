@@ -11,11 +11,9 @@ import numpy as np
 import sympy as sy
 import scipy.integrate as spi
 from sympy.abc import symbols
-import scipy.optimize as spo
 from sympy.utilities.lambdify import lambdify 
 import itertools as it
 import time
-import matplotlib.pyplot as plt
 import iminuit as im
 import pandas as pd
 
@@ -45,9 +43,19 @@ def G_roots_find(n):
     return [i for i in it.product(root_list, repeat = n)]
 
 
-def Homotopy_Continuation(t, x_array, F_list, N, expansion_array, expansion_variables, tolerance = 10, tolerance_zero = 1e-6, ratio_tolerance = 1e-10,\
+def Homotopy_Continuation(t, x_array, F_list, N, expansion_array, expansion_variables, tolerance = 10,\
+                          tolerance_zero = 1e-6, ratio_tolerance = 1e-10,\
                           N_ratio_tolerance = 100, debug = False, corrector_Newtons = True, save_path = False):
     
+    """
+    F = To be given as a list of variables, for example F = [x**2 , y**2], where the symbols used must first be
+    imported above
+    x_array = List of variables used Ex : [x,y]
+    N = Number of steps for the Homotopy Continuation
+    expansion_array = expansion into complex, Ex: [a + 1j*b, c + 1j*d], variables must first be imported above
+    expansion_variables = Array of variables for expansion to complex numbers, Ex for 2D : [a,b,c,d]
+    N_ratio_tolerance = number of steps for Newton's method
+    """
     time_start = time.time()
     
     #convert F to a function
@@ -129,7 +137,7 @@ def Homotopy_Continuation(t, x_array, F_list, N, expansion_array, expansion_vari
                     raise TypeError('The determinant of H is zero!')
                 
                 #perform RK4 method
-                x_old_predictor=x_old
+                x_old_predictor = x_old
                 sol = spi.solve_ivp(H_prime, (t_old, t_n), x_old)
                 sol_x = sol.y[:,-1]
                    
@@ -140,7 +148,7 @@ def Homotopy_Continuation(t, x_array, F_list, N, expansion_array, expansion_vari
             delta = np.full(n, ratio_tolerance)
             
             if corrector_Newtons is True:
-                
+                method_used = 'Newton-Raphson with ' + str(N_ratio_tolerance) + ' steps.'
                 time_newtons_start = time.time()
                 #tolerance criteria for step size in Newton's Method
                 while max(ratio) > ratio_tolerance and N_ratio < N_ratio_tolerance:
@@ -162,7 +170,7 @@ def Homotopy_Continuation(t, x_array, F_list, N, expansion_array, expansion_vari
                     print('Time for Newton: {}'.format(time_newtons_end - time_newtons_start))
                     
             else:
-                
+                method_used = 'Minuit'
                 if n == 1:
                     raise TypeError('Minuit only runs for more than 1 dimension!')
                     
@@ -223,16 +231,24 @@ def Homotopy_Continuation(t, x_array, F_list, N, expansion_array, expansion_vari
             accuracies.append(remainder)
 
     time_end = time.time()
-    print('Maximum Error : {}'.format(max_rem_total))
-    print('It took {} s to run!'.format(time_end - time_start))
     
     if save_path is False:
         x_old_arrays = np.full(len(x_olds),'-')
     
-    max_error_array = [max_rem_total] + list(np.full(len(x_olds) - 1, ''))
-    time_taken = [time_end - time_start] + list(np.full(len(x_olds) - 1, ''))
-    function_list = F_list + list(np.full(len(x_olds) - len(F_list), ''))
-    df = pd.DataFrame({'Roots' : x_olds, 'Accuracy' : accuracies, 'Paths' : x_old_arrays, 'Max Accuracy' : max_error_array, 'Time Taken' : time_taken, 'Function List': function_list })
-    df.to_csv("try2.csv", index=True)
+    
+    other_info = ['Function Used'] + F_list + [''] + ['Time Taken'] + [time_end - time_start] + [''] + \
+    ['Root Finding Method Used'] + [method_used] + [''] + ['Max Accuracy'] + [max_rem_total] + \
+    [''] + ['Number of Homotopy Steps'] + [N] 
+    
+    len_x_old = len(x_olds)
+    total_length = max(len(other_info), len_x_old)
+    
+    other_info = other_info + list(np.full(total_length - len(other_info), ''))
+    x_olds = x_olds + list(np.full(total_length - len_x_old, ''))
+    accuracies = accuracies + list(np.full(total_length - len_x_old, ''))
+    x_old_arrays = list(x_old_arrays) + list(np.full(total_length - len_x_old, ''))
+    
+    df = pd.DataFrame({'Roots' : x_olds, 'Accuracy' : accuracies, 'Paths' : x_old_arrays, 'Other Info' : other_info})
+    df.to_csv("Homotopy_Roots.csv", index=True)
     return x_olds, x_old_arrays
 
