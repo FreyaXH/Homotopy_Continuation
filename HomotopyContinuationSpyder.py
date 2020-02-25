@@ -45,7 +45,7 @@ def G_roots_find(n):
 
 def Homotopy_Continuation(t, x_array, F_list, N, expansion_array, expansion_variables, tolerance = 10,\
                           tolerance_zero = 1e-6, ratio_tolerance = 1e-10,\
-                          N_ratio_tolerance = 100, debug = False, corrector_Newtons = True, save_path = False):
+                          N_ratio_tolerance = 100, debug = False, corrector_Newtons = True, save_path = False, file_name = 'Homotopy_Roots'):
     
     """
     F = To be given as a list of variables, for example F = [x**2 , y**2], where the symbols used must first be
@@ -249,6 +249,6 @@ def Homotopy_Continuation(t, x_array, F_list, N, expansion_array, expansion_vari
     x_old_arrays = list(x_old_arrays) + list(np.full(total_length - len_x_old, ''))
     
     df = pd.DataFrame({'Roots' : x_olds, 'Accuracy' : accuracies, 'Paths' : x_old_arrays, 'Other Info' : other_info})
-    df.to_csv("Homotopy_Roots.csv", index=True)
+    df.to_csv(file_name + '.csv', index=True)
     return x_olds, x_old_arrays
 
