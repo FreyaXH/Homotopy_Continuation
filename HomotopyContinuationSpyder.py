@@ -60,9 +60,16 @@ def G_Roots(n):
     else:
         return [i for i in it.product(root_list, repeat = n)]
 
+def define_4by4_matrix_inv_and_determinant():
+    A = sy.Matrix(4, 4, symbols('A:4:4'))
+    return A, A.det(), A.inv()
+    
+A, det_4by4_matrix, inverse_4by4_matrix = define_4by4_matrix_inv_and_determinant()
 
-def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, expanded_functions, expansion_variables,\
-                          remainder_tolerance = 1e-2, check_determinant_H = 1e-6, newton_ratio_accuracy = 1e-10, max_newton_step = 100, debug = False, \
+
+def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps = 5, expanded_functions = None, expansion_variables = None,\
+                          matrix_A = A, det_matrix = det_4by4_matrix, inverse_matrix = inverse_4by4_matrix, remainder_tolerance = 1e-2, check_determinant_H = 1e-6, \
+                          newton_ratio_accuracy = 1e-10, max_newton_step = 100, debug = False, \
                           Newtons_method = True, save_path = False, file_name = 'Homotopy_Roots'):
     
     """
@@ -77,10 +84,12 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
                           Must not contain t.
         input_functions : Function to be determined. Should be given as a list or array of variables.
                           Example: F = [x**2 , y**2]
-        number_of_steps : Number of steps for the Homotopy Continuation
+        number_of_steps : Number of steps for the Homotopy Continuation. Default : 5
         expanded_functions : expansion into complex, Ex: [a + 1j*b, c + 1j*d]
                             Variables must first be imported above, and cannot contain those in input_variables or t
+                            Only needed when Minuit is used
         expansion_variables = Array of variables for expansion to complex numbers, Ex for 2D : [a,b,c,d]
+                            Only needed when Minuit is used
         remainder_tolerance : Tolerance for roots to be considered, how far is the function from zero.
         check_determinant_H : check that determinant is not below this tolerance
         newton_ratio_accuracy : Convergence criteria for Newton's
@@ -117,21 +126,44 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
     
     #first derivative of H wrt to all the x variables
     derivative_H_wrt_x = sy.Matrix([[H[i].diff(input_variables[j]) for j in range(len(input_variables))] for i in range(len(input_variables))])
+    print(len(derivative_H_wrt_x))
+    print('here')
     
-    #check the determinant does not go to zero so can invert
-    determinant_H = derivative_H_wrt_x.det()
+    
+    if dimension == 4:
+        time1 = time.time()
+        determinant_H = derivative_H_wrt_x.det(method='lu')
+        print('Cal: {}'.format(determinant_H))
+    
+        #invert the matrix of the derivatives of H wrt to x variables
+        inverse_derivative_H_wrt_x = derivative_H_wrt_x.inv(method = 'LU')
+        print('inv:{}'.format(inverse_derivative_H_wrt_x))
+        time2 = time.time()
+        print('Time for calculation : {}'.format(time2 - time1))
+    
+    #else:
+        print('whatttt')
+        time3 = time.time()
+        determinant_H = det_matrix.subs(zip(list(matrix_A), list(derivative_H_wrt_x)))
+        inverse_derivative_H_wrt_x = inverse_matrix.subs(zip(list(matrix_A), list(derivative_H_wrt_x)))
+        print('Substitution: {}'.format(inverse_derivative_H_wrt_x))
+        print(len(inverse_derivative_H_wrt_x))
+        time4 = time.time()
+        print('Time for sub : {}'.format(time4 - time3))
+        
+    #check the determinant does not go to zero so can invert    
     if abs(determinant_H) == 0:
-        raise TypeError('The determinant of H is zero!')
-    
-    #derivative of H with respect to t
-    derivative_H_wrt_t = sy.Matrix([H[i].diff(t) for i in range(len(input_variables))])
+        raise TypeError('1. The determinant of H is zero!')
+        
+    print('reA H')
     
     #function of determinant H
     determinant_H_func = lambdify((t, input_variables), determinant_H)
+
+    #derivative of H with respect to t
+    derivative_H_wrt_t = sy.Matrix([H[i].diff(t) for i in range(len(input_variables))])
     
-    #invert the matrix of the derivatives of H wrt to x variables
-    inverse_derivative_H_wrt_x = derivative_H_wrt_x**-1
-    
+    print('halp')
     #differentiate of x wrt to t
     x_derivative_t = -inverse_derivative_H_wrt_x*derivative_H_wrt_t
     x_derivative_t_func = lambdify((t, input_variables), [x_derivative_t[i] for i in range(len(x_derivative_t))])
@@ -149,7 +181,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
     
     #track accuracy of each root
     accuracies = []
-    
+    print('reached here')
     #run for all roots in the starting system
     for x_old in G_roots:
         
@@ -184,7 +216,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
                 
                 #check determinant to make sure does not go to zero
                 if abs(determinant_H_func(t_new, x_old)) < check_determinant_H:
-                    raise TypeError('The determinant of H is zero!')
+                    raise TypeError('2. The determinant of H is zero!')
                 
                 #perform RK4 method for n dimensions            
                 predictor = spi.solve_ivp(x_derivative_t_func, (t_old, t_new), x_old)
@@ -213,7 +245,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
                     #check determinant to ensure can invert
                     if dimension != 1:
                         if abs(determinant_H_func(t_new, x_old)) < check_determinant_H:
-                            raise TypeError('The determinant of H is zero!')
+                            raise TypeError('3. The determinant of H is zero!')
                     
                     #find new position of root
                     x_old_intermediate = x_old - H_over_derivative_H_wrt_x_func(t_new, x_old)
