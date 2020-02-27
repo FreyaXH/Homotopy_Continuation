@@ -46,7 +46,9 @@ def G_Roots(n):
         return [i for i in it.product(root_list, repeat = n)]
 
 
-def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, expanded_functions, expansion_variables, remainder_tolerance = 10,check_determinant_H = 1e-6, newton_ratio_accuracy = 1e-10,max_newton_step = 100, debug = False, Newtons_method = True, save_path = False, file_name = 'Homotopy_Roots'):
+def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, expanded_functions, expansion_variables,\
+                          remainder_tolerance = 10, check_determinant_H = 1e-6, newton_ratio_accuracy = 1e-10, max_newton_step = 100, debug = False, \
+                          Newtons_method = True, save_path = False, file_name = 'Homotopy_Roots'):
     
     """
     F = To be given as a list of variables, for example F = [x**2 , y**2], where the symbols used must first be
@@ -79,7 +81,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
     H = Homotopy(t, G(input_variables), F(input_variables), gamma)
     
     #first derivative of H
-    derivative_H_wrt_x = sy.Matrix([[H[i].diff(input_variables[j]) for i in range(len(input_variables))] for j in range(len(input_variables))])
+    derivative_H_wrt_x = sy.Matrix([[H[i].diff(input_variables[j]) for j in range(len(input_variables))] for i in range(len(input_variables))])
     
     
     determinant_H = derivative_H_wrt_x.det()
@@ -124,7 +126,6 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
             t_old = t_new
             t_new += delta_t
             
-            
             if dimension == 1:
                 #perform RK4 for 1 D
                 predictor = spi.solve_ivp(inverse_derivative_H_func_1d, (t_old, t_new), x_old)
@@ -139,7 +140,6 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
                 predicted_solution = predictor.y[:,-1]   
 
             x_old = predicted_solution
-            
             #newton's method
             ratio = np.full(dimension, 1)
             number_of_newton_steps = 0
@@ -163,7 +163,6 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
                     ratio = [change_in_x[j]/(change_in_x_old[j] + 1e-10) for j in range(dimension)]
                     x_old = x_old_intermediate
                     number_of_newton_steps += 1
-                    #x_old = spo.newton(H_func, sol_x, fprime = Hprime_x, args=(t_n, ))
                     
                     time_newtons_end = time.time()
                     if debug: print("After Newton", x_old)
@@ -177,7 +176,6 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
                     raise TypeError('Minuit only runs for more than 1 dimension!')
                     
                 time_minuit_start = time.time()
-                #iminuit
                 H_at_fixed_t = Homotopy(t_new, G(expanded_functions), F(expanded_functions), gamma)
                
                 if debug: print("Homotopy at current step: ", H_at_fixed_t)
@@ -207,7 +205,6 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
 
                 x_old_im_re_vals = m.values
                 
-                
                 x_old = [x_old_im_re_vals[j] + 1j*x_old_im_re_vals[j+1] for j in range(0, 2*dimension, 2)]
                 
                 if debug: print("After Minuit we got", x_old)
@@ -216,14 +213,12 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
                 if debug:
                     print('Time for Minuit: {}'.format(time_minuit_end - time_minuit_start))
                     
-            #print(x_old)
             trace.append(x_old)    
+            
         #check root is found
-        #print(x_old)
         if dimension == 1 :
             remainder = list(map(abs, F([x_old])))
         remainder = list(map(abs, F(x_old))) 
-        print(x_old)
         if max(remainder) < remainder_tolerance:
             x_old = [x_old[i].real if abs(x_old[i].imag) < check_determinant_H else x_old[i] for i in range(len(x_old))]
             
