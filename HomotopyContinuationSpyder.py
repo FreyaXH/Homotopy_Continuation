@@ -61,20 +61,27 @@ def G_Roots(n):
         return [i for i in it.product(root_list, repeat = n)]
 
 def define_4by4_matrix_inv_and_determinant():
+    """
+    Constructs a 4 x 4 matrix and calculates the form of the determinant and inverse. 
+    """
     A = sy.Matrix(4, 4, symbols('A:4:4'))
     return A, A.det(), A.inv()
     
 A, det_4by4_matrix, inverse_4by4_matrix = define_4by4_matrix_inv_and_determinant()
 
 
-def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps = 5, expanded_functions = None, expansion_variables = None,\
-                          matrix_A = A, det_matrix = det_4by4_matrix, inverse_matrix = inverse_4by4_matrix, remainder_tolerance = 1e-2, check_determinant_H = 1e-6, \
+def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps = 5, Newtons_method = True, expanded_functions = None, expansion_variables = None,\
+                          matrix_substitution = False, matrix_A = A, det_matrix = det_4by4_matrix, inverse_matrix = inverse_4by4_matrix, remainder_tolerance = 1e-2, check_determinant_H = 1e-6, \
                           newton_ratio_accuracy = 1e-10, max_newton_step = 100, debug = False, \
-                          Newtons_method = True, save_path = False, file_name = 'Homotopy_Roots'):
+                          save_path = False, file_name = 'Homotopy_Roots'):
     
     """
     Perfroms the Homotopy Continuation to determine the roots of a given function F, within a certain accuracy
     using the RK4 method during the predictor step and either Newton's method of Minuit for the root-finding step. 
+    For dimensions more than 4, setting matric_substitution to True and inputting ax externally calculated form of the
+    determinant and inverse of the matrix will speed up the calculation. 
+    
+    If function takes too long to run (for very complicated functions) increasing the number of Homotopy steps 
     
     Parameters:
         t : Just given as a variable, the time step.
@@ -85,16 +92,24 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
         input_functions : Function to be determined. Should be given as a list or array of variables.
                           Example: F = [x**2 , y**2]
         number_of_steps : Number of steps for the Homotopy Continuation. Default : 5
+        
+        Newtons_method : Default True else use Minuit
         expanded_functions : expansion into complex, Ex: [a + 1j*b, c + 1j*d]
-                            Variables must first be imported above, and cannot contain those in input_variables or t
+        (only for Minuit)    Variables must first be imported above, and cannot contain those in input_variables or t
                             Only needed when Minuit is used
         expansion_variables = Array of variables for expansion to complex numbers, Ex for 2D : [a,b,c,d]
-                            Only needed when Minuit is used
+        (only for Minuit)     Only needed when Minuit is used
+        
+        matrix_substitution = Default False. If True, calculated determinant form and inverse form must be given
+                            Useful for 4 dimensions and above.
+        matrix_A : The intial matrix for which the determinant and inverse are calculated (only if matrix_substitution is True)
+        det_matrix : form of determinant of the matrix (only if matrix_substitution is True)
+        inverse_matrix : form of the inverse (only if matrix_substitution is True)
+        
         remainder_tolerance : Tolerance for roots to be considered, how far is the function from zero.
         check_determinant_H : check that determinant is not below this tolerance
         newton_ratio_accuracy : Convergence criteria for Newton's
         max_newton_step = Max number of steps for Newton's method
-        Newtons_method : Default True else use Minuit
         save_path : Tracks and saves how roots evolve
         file_name : Save roots in file
     """
@@ -126,44 +141,33 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
     
     #first derivative of H wrt to all the x variables
     derivative_H_wrt_x = sy.Matrix([[H[i].diff(input_variables[j]) for j in range(len(input_variables))] for i in range(len(input_variables))])
-    print(len(derivative_H_wrt_x))
-    print('here')
     
-    
-    if dimension == 4:
+    if matrix_substitution is False:
         time1 = time.time()
         determinant_H = derivative_H_wrt_x.det(method='lu')
-        print('Cal: {}'.format(determinant_H))
     
         #invert the matrix of the derivatives of H wrt to x variables
-        inverse_derivative_H_wrt_x = derivative_H_wrt_x.inv(method = 'LU')
-        print('inv:{}'.format(inverse_derivative_H_wrt_x))
+        inverse_derivative_H_wrt_x = derivative_H_wrt_x**-1
         time2 = time.time()
-        print('Time for calculation : {}'.format(time2 - time1))
+        if debug: print('Time for calculation : {}'.format(time2 - time1))
     
-    #else:
-        print('whatttt')
+    else:
         time3 = time.time()
         determinant_H = det_matrix.subs(zip(list(matrix_A), list(derivative_H_wrt_x)))
-        inverse_derivative_H_wrt_x = inverse_matrix.subs(zip(list(matrix_A), list(derivative_H_wrt_x)))
-        print('Substitution: {}'.format(inverse_derivative_H_wrt_x))
-        print(len(inverse_derivative_H_wrt_x))
+        inverse_derivative_H_wrt_x = inverse_matrix.subs(list(zip(matrix_A, derivative_H_wrt_x)))
         time4 = time.time()
-        print('Time for sub : {}'.format(time4 - time3))
+        if debug: print('Time for sub : {}'.format(time4 - time3))
         
     #check the determinant does not go to zero so can invert    
-    if abs(determinant_H) == 0:
+    if determinant_H == 0:
         raise TypeError('1. The determinant of H is zero!')
-        
-    print('reA H')
-    
+            
     #function of determinant H
     determinant_H_func = lambdify((t, input_variables), determinant_H)
 
     #derivative of H with respect to t
     derivative_H_wrt_t = sy.Matrix([H[i].diff(t) for i in range(len(input_variables))])
     
-    print('halp')
     #differentiate of x wrt to t
     x_derivative_t = -inverse_derivative_H_wrt_x*derivative_H_wrt_t
     x_derivative_t_func = lambdify((t, input_variables), [x_derivative_t[i] for i in range(len(x_derivative_t))])
@@ -181,7 +185,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
     
     #track accuracy of each root
     accuracies = []
-    print('reached here')
+
     #run for all roots in the starting system
     for x_old in G_roots:
         
@@ -218,9 +222,9 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
                 if abs(determinant_H_func(t_new, x_old)) < check_determinant_H:
                     raise TypeError('2. The determinant of H is zero!')
                 
-                #perform RK4 method for n dimensions            
+                #perform RK4 method for n dimensions
                 predictor = spi.solve_ivp(x_derivative_t_func, (t_old, t_new), x_old)
-                predicted_solution = predictor.y[:,-1]   
+                predicted_solution = predictor.y[:,-1] 
 
             x_old = predicted_solution
             
@@ -360,6 +364,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
     df = pd.DataFrame({'Roots' : solutions, 'Accuracy' : accuracies, 'Paths' : paths, 'Other Info' : other_info})
     df.to_csv(file_name + '.csv', index=True)
     
+    print(solutions)
     return solutions, paths
 
 
