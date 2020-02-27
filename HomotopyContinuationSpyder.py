@@ -10,7 +10,6 @@ Created on Tue Feb 25 15:24:37 2020
 import numpy as np
 import sympy as sy
 import scipy.integrate as spi
-#import scipy.optimize as spo
 from sympy.abc import symbols
 from sympy.utilities.lambdify import lambdify 
 import itertools as it
@@ -41,7 +40,10 @@ def Gamma_Generator():
 #roots of startin function
 def G_Roots(n):
     root_list = [1, np.exp(1j*2*np.pi/3), np.exp(1j*2*np.pi*2/3)]
-    return [i for i in it.product(root_list, repeat = n)]
+    if n == 1: 
+        return root_list
+    else:
+        return [i for i in it.product(root_list, repeat = n)]
 
 
 def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, expanded_functions, expansion_variables, remainder_tolerance = 10,check_determinant_H = 1e-6, newton_ratio_accuracy = 1e-10,max_newton_step = 100, debug = False, Newtons_method = True, save_path = False, file_name = 'Homotopy_Roots'):
@@ -72,7 +74,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
     gamma = Gamma_Generator()
     
     G_roots = G_Roots(dimension)
-    
+
     #construct homotopy
     H = Homotopy(t, G(input_variables), F(input_variables), gamma)
     
@@ -100,10 +102,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
     H_over_derivative_H_wrt_x_func = lambdify((t, input_variables), [H_over_derivative_H_wrt_x[i] for i in range(len(H_over_derivative_H_wrt_x))])
         
     inverse_derivative_H_func = lambdify((t, input_variables), [inverse_derivative_H[i] for i in range(len(inverse_derivative_H))])
-    
-    #derivative_H_wrt_x_func = lambdify((input_variables,t), [derivative_H_wrt_x[i] for i in range(len(derivative_H_wrt_x))])    
-    #H_func = lambdify([input_variables,t], H)
-    
+    inverse_derivative_H_func_1d = lambdify((t,input_variables), H[0].diff(t)/H[0].diff(x))
 
     paths = []
     solutions = []
@@ -116,44 +115,48 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
             
         t_new = 0
         
+        if dimension == 1:
+                x_old = np.array([x_old])
+                
         #run for all steps starting at t=0 ending at t=1
         while round(t_new,5) < 1:
             trace.append(x_old)
             t_old = t_new
             t_new += delta_t
             
-            if dimension == 1:
-                predictor = spi.solve_ivp(inverse_derivative_H_func, (t_old, t_new), x_old)
-                predicted_solution = predictor.y[-1][-1]
-                
-                #H_func_1d = lambdify((x,t), H_func([x], t)[0])
-                #derivative_H_wrt_x_func_1d = lambdify((x,t), derivative_H_wrt_x_func([x], t)[0])
-
-                #x_old = [spo.newton(H_func_1d, predicted_solution, fprime = derivative_H_wrt_x_func_1d, args=(t_new, ))]
             
-            else:
+            if dimension == 1:
+                #perform RK4 for 1 D
+                predictor = spi.solve_ivp(inverse_derivative_H_func_1d, (t_old, t_new), x_old)
+                predicted_solution = np.array([predictor.y[-1][-1]])
+                
+            if dimension != 1:
                 if abs(determinant_H_func(t_new, x_old)) < check_determinant_H:
                     raise TypeError('The determinant of H is zero!')
                 
-                #perform RK4 method
-                #x_old_predictor = x_old
+                #perform RK4 method                
                 predictor = spi.solve_ivp(inverse_derivative_H_func, (t_old, t_new), x_old)
-                predicted_solution = predictor.y[:,-1]
-                   
-            #newton's method
+                predicted_solution = predictor.y[:,-1]   
+
             x_old = predicted_solution
+            
+            #newton's method
             ratio = np.full(dimension, 1)
             number_of_newton_steps = 0
             change_in_x = np.full(dimension, newton_ratio_accuracy)
-            
+                
             if Newtons_method is True:
                 method_used = 'Newton-Raphson with ' + str(max_newton_step) + ' steps.'
                 time_newtons_start = time.time()
+                
                 #tolerance criteria for step size in Newton's Method
                 while max(ratio) > newton_ratio_accuracy and number_of_newton_steps < max_newton_step:
                     if debug: print("Before Newton", x_old)
-                    if abs(determinant_H_func(t_new, x_old)) < check_determinant_H:
-                        raise TypeError('The determinant of H is zero!')
+                    
+                    if dimension != 1:
+                        if abs(determinant_H_func(t_new, x_old)) < check_determinant_H:
+                            raise TypeError('The determinant of H is zero!')
+                        
                     x_old_intermediate = x_old - H_over_derivative_H_wrt_x_func(t_new, x_old)
                     change_in_x_old = change_in_x
                     change_in_x = abs(x_old_intermediate - x_old)
@@ -167,7 +170,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
                 if debug:
 
                     print('Time for Newton: {}'.format(time_newtons_end - time_newtons_start))
-                    
+                        
             else:
                 method_used = 'Minuit'
                 if dimension == 1:
@@ -212,10 +215,15 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps, 
                 
                 if debug:
                     print('Time for Minuit: {}'.format(time_minuit_end - time_minuit_start))
+                    
+            #print(x_old)
             trace.append(x_old)    
         #check root is found
+        #print(x_old)
+        if dimension == 1 :
+            remainder = list(map(abs, F([x_old])))
         remainder = list(map(abs, F(x_old))) 
-        
+        print(x_old)
         if max(remainder) < remainder_tolerance:
             x_old = [x_old[i].real if abs(x_old[i].imag) < check_determinant_H else x_old[i] for i in range(len(x_old))]
             
