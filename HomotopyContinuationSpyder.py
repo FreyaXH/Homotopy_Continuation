@@ -15,7 +15,7 @@ import itertools as it
 import time
 import iminuit as im
 import pandas as pd
-
+import ast as ast
 
 #import according to how many variables are needed - Ex: for 1D import x, a, b
 t,x,y, z, w, h, a,b,c,d, e, f, g,h = symbols('t,x,y, z, w, h, a,b,c,d, e,f,g,h', real = True)
@@ -71,8 +71,8 @@ A, det_4by4_matrix, inverse_4by4_matrix = define_4by4_matrix_inv_and_determinant
 
 
 def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps = 5, Newtons_method = True, expanded_functions = None, expansion_variables = None,\
-                          matrix_substitution = False, matrix_A = A, det_matrix = det_4by4_matrix, inverse_matrix = inverse_4by4_matrix, remainder_tolerance = 1e-2, check_determinant_H = 1e-6, \
-                          newton_ratio_accuracy = 1e-10, max_newton_step = 100, debug = False, \
+                          matrix_substitution = False, matrix_A = A, det_matrix = det_4by4_matrix, inverse_matrix = inverse_4by4_matrix, remainder_tolerance = 1e-2, tolerance_zero = 1e-6, \
+                          unique_roots = True, decimal_places = 3, newton_ratio_accuracy = 1e-10, max_newton_step = 100, debug = False, \
                           save_path = False, file_name = 'Homotopy_Roots'):
     
     """
@@ -106,8 +106,10 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
         det_matrix : form of determinant of the matrix (only if matrix_substitution is True)
         inverse_matrix : form of the inverse (only if matrix_substitution is True)
         
+        unique_roots : Default True, returns only allthe unique roots
+        decimal_places : precision of roots found
         remainder_tolerance : Tolerance for roots to be considered, how far is the function from zero.
-        check_determinant_H : check that determinant is not below this tolerance
+        tolerance_zero : below this tolerance, the number is assumed to be zero
         newton_ratio_accuracy : Convergence criteria for Newton's
         max_newton_step = Max number of steps for Newton's method
         save_path : Tracks and saves how roots evolve
@@ -185,6 +187,9 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
     
     #track accuracy of each root
     accuracies = []
+    
+    #track real rots
+    solutions_real = []
 
     #run for all roots in the starting system
     for x_old in G_roots:
@@ -219,7 +224,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
             if dimension != 1:
                 
                 #check determinant to make sure does not go to zero
-                if abs(determinant_H_func(t_new, x_old)) < check_determinant_H:
+                if abs(determinant_H_func(t_new, x_old)) < tolerance_zero:
                     raise TypeError('2. The determinant of H is zero!')
                 
                 #perform RK4 method for n dimensions
@@ -248,7 +253,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
                     
                     #check determinant to ensure can invert
                     if dimension != 1:
-                        if abs(determinant_H_func(t_new, x_old)) < check_determinant_H:
+                        if abs(determinant_H_func(t_new, x_old)) < tolerance_zero:
                             raise TypeError('3. The determinant of H is zero!')
                     
                     #find new position of root
@@ -329,8 +334,6 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
         remainder = list(map(abs, F(x_old))) 
         
         if max(remainder) < remainder_tolerance:
-            #make root real if imaginary part is below the zero tolerance
-            x_old = [x_old[i].real if abs(x_old[i].imag) < check_determinant_H else x_old[i] for i in range(len(x_old))]
             
             #store the maximum remainder
             max_rem = max(remainder)
@@ -338,7 +341,6 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
                 max_remainder_value = max_rem
 
             solutions.append(x_old)
-            
             #if paths are wanted
             if save_path is True:
                 paths.append(trace)
@@ -349,22 +351,38 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
     if save_path is False:
         paths = np.full(len(solutions),'-')
     
+    #only keep all the unique roots
+    if unique_roots is True:
+        num_of_roots_found = len(solutions)
+        solutions_rounded = np.around(solutions, decimal_places)
+        solutions, unique_index = np.unique(solutions_rounded, axis=0, return_index=True)
+        num_of_unique_roots = len(solutions)
+        
+        #keep only the values associated to unique roots
+        accuracies = [accuracies[i] for i in unique_index]
+        paths = [paths[i] for i in unique_index]
+        
+    #make root real if imaginary part is below the zero tolerance
+    solutions_real = [[solutions[j][i].real for i in range(len(solutions[j])) if abs(solutions[j][i].imag) < tolerance_zero] for j in range(len(solutions))] 
+    solutions_real = [solutions_real_j for solutions_real_j in (solutions_real) if len(solutions_real_j) == dimension] 
+
     #save information into csv file
     other_info = ['Function Used'] + input_functions + [''] + ['Time Taken'] + [time_end - time_start] + [''] + \
     ['Root Finding Method Used'] + [method_used] + [''] + ['Worst Accuracy'] + [max_remainder_value] + \
-    [''] + ['Number of Homotopy Steps'] + [number_of_steps] 
+    [''] + ['Number of Homotopy Steps'] + [number_of_steps]  + [''] + ['Number of Roos Found'] + [num_of_roots_found] \
+    + [''] + ['Number of Unique Roots'] + [num_of_unique_roots] 
     
     len_solutions = len(solutions)
     total_length = max(len(other_info), len_solutions)
     
     other_info = other_info + list(np.full(total_length - len(other_info), ''))
-    solutions = solutions + list(np.full(total_length - len_solutions, ''))
+    solutions = list(solutions) + list(np.full(total_length - len_solutions, ''))
+    solutions_real = solutions_real + list(np.full(total_length - len(solutions_real), ''))
     accuracies = accuracies + list(np.full(total_length - len_solutions, ''))
     paths = list(paths) + list(np.full(total_length - len_solutions, ''))
-    df = pd.DataFrame({'Roots' : solutions, 'Accuracy' : accuracies, 'Paths' : paths, 'Other Info' : other_info})
+    df = pd.DataFrame({'Roots' : solutions, 'Real Roots' : solutions_real, 'Accuracy' : accuracies, 'Paths' : paths, 'Other Info' : other_info})
     df.to_csv(file_name + '.csv', index=True)
     
-    print(solutions)
     return solutions, paths
 
 
