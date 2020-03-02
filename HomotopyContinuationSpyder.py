@@ -72,7 +72,7 @@ A, det_4by4_matrix, inverse_4by4_matrix = define_4by4_matrix_inv_and_determinant
 
 def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps = 5, Newtons_method = True, expanded_functions = None, expansion_variables = None,\
                           matrix_substitution = False, matrix_A = A, det_matrix = det_4by4_matrix, inverse_matrix = inverse_4by4_matrix, remainder_tolerance = 1e-3, tolerance_zero = 1e-6, \
-                          unique_roots = True, decimal_places = 5, newton_ratio_accuracy = 1e-10, max_newton_step = 100, debug = False, \
+                          decimal_places = 5, newton_ratio_accuracy = 1e-10, max_newton_step = 100, debug = False, \
                           save_path = False, file_name = 'Homotopy_Roots'):
     
     """
@@ -106,8 +106,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
         det_matrix : form of determinant of the matrix (only if matrix_substitution is True)
         inverse_matrix : form of the inverse (only if matrix_substitution is True)
         
-        unique_roots : Default True, returns only allthe unique roots
-        decimal_places : precision of roots found
+        decimal_places : precision of roots found to determine unique roots
         remainder_tolerance : Tolerance for roots to be considered, how far is the function from zero.
         tolerance_zero : below this tolerance, the number is assumed to be zero
         newton_ratio_accuracy : Convergence criteria for Newton's
@@ -337,7 +336,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
         if max(remainder) < remainder_tolerance:
             
             #make root real if imaginary part is below the zero tolerance 
-            x_old = [x_old[i].real if abs(x_old[i].imag) < tolerance_zero else x_old[i] for i in range(len(x_old))] 
+            x_old = list(x_old)
             
             #store the maximum remainder
             max_rem = max(remainder)
@@ -358,14 +357,13 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
     num_of_roots_found = len(solutions)
     
     #only keep all the unique roots
-    if unique_roots is True:
-        solutions_unique = cp.deepcopy(solutions)
-        solutions_rounded = np.around(solutions_unique, decimal_places)
-        solutions_unique, unique_index = np.unique(solutions_rounded, axis=0, return_index=True)
+    solutions_unique = cp.deepcopy(solutions)
+    solutions_rounded = np.around(solutions_unique, decimal_places)
+    solutions_unique, unique_index = np.unique(solutions_rounded, axis=0, return_index=True)
         
-        #keep only the values associated to unique roots
-        accuracies = [accuracies[i] for i in unique_index]
-        paths = [paths[i] for i in unique_index]
+    #keep only the values associated to unique roots
+    accuracies = [accuracies[i] for i in unique_index]
+    paths = [paths[i] for i in unique_index]
         
     num_of_unique_roots = len(solutions_unique)
     
