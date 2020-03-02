@@ -8,12 +8,12 @@ Created on Thu Feb 27 20:06:51 2020
 import numpy as np
 #import scipy as sp
 import pandas as pd
-import ast as a
+import ast as ast
 
 def obtained_roots(filename,decimal_places):
     df = pd.read_csv(filename)
     roots = df['Roots']
-    roots = [np.around(a.literal_eval(roots[i]), decimal_places) for i in range(len(roots))]
+    roots = [np.around(ast.literal_eval(roots[i]), decimal_places) for i in range(len(roots))]
     return roots
 
 

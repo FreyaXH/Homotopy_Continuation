@@ -15,6 +15,7 @@ import itertools as it
 import time
 import iminuit as im
 import pandas as pd
+import copy as cp
 
 #import according to how many variables are needed - Ex: for 1D import x, a, b
 t,x,y, z, w, h, a,b,c,d, e, f, g,h = symbols('t,x,y, z, w, h, a,b,c,d, e,f,g,h', real = True)
@@ -335,6 +336,9 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
         
         if max(remainder) < remainder_tolerance:
             
+            #make root real if imaginary part is below the zero tolerance 
+            x_old = [x_old[i].real if abs(x_old[i].imag) < tolerance_zero else x_old[i] for i in range(len(x_old))] 
+            
             #store the maximum remainder
             max_rem = max(remainder)
             if max_remainder_value < max_rem:
@@ -355,15 +359,16 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
     
     #only keep all the unique roots
     if unique_roots is True:
-        
-        solutions_rounded = np.around(solutions, decimal_places)
-        solutions, unique_index = np.unique(solutions_rounded, axis=0, return_index=True)
+        solutions_unique = cp.deepcopy(solutions)
+        solutions_rounded = np.around(solutions_unique, decimal_places)
+        solutions_unique, unique_index = np.unique(solutions_rounded, axis=0, return_index=True)
         
         #keep only the values associated to unique roots
         accuracies = [accuracies[i] for i in unique_index]
         paths = [paths[i] for i in unique_index]
         
-    num_of_unique_roots = len(solutions)
+    num_of_unique_roots = len(solutions_unique)
+    
     #make root real if imaginary part is below the zero tolerance
     solutions_real = [[solutions[j][i].real for i in range(len(solutions[j])) if abs(solutions[j][i].imag) < tolerance_zero] for j in range(len(solutions))] 
     solutions_real = [solutions_real_j for solutions_real_j in (solutions_real) if len(solutions_real_j) == dimension] 
@@ -374,15 +379,17 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
     [''] + ['Number of Homotopy Steps'] + [number_of_steps]  + [''] + ['Number of Roots Found'] + [num_of_roots_found] \
     + [''] + ['Number of Unique Roots'] + [num_of_unique_roots] 
     
-    len_solutions = len(solutions)
-    total_length = max(len(other_info), len_solutions)
+    total_length = max(len(other_info), num_of_roots_found)
     
     other_info = other_info + list(np.full(total_length - len(other_info), ''))
-    solutions = list(solutions) + list(np.full(total_length - len_solutions, ''))
+       
+    solutions_unique = list(solutions_unique) + list(np.full(total_length - num_of_unique_roots, ''))
     solutions_real = solutions_real + list(np.full(total_length - len(solutions_real), ''))
-    accuracies = accuracies + list(np.full(total_length - len_solutions, ''))
-    paths = list(paths) + list(np.full(total_length - len_solutions, ''))
-    df = pd.DataFrame({'Roots' : solutions, 'Real Roots' : solutions_real, 'Accuracy' : accuracies, 'Paths' : paths, 'Other Info' : other_info})
+    accuracies = accuracies + list(np.full(total_length - num_of_unique_roots, ''))
+    paths = list(paths) + list(np.full(total_length - num_of_unique_roots, ''))
+    solutions = solutions + list(np.full(total_length - num_of_roots_found, ''))
+    
+    df = pd.DataFrame({'Roots' : solutions, 'Unique Roots': solutions_unique, 'Real Roots' : solutions_real, 'Accuracy' : accuracies, 'Paths' : paths, 'Other Info' : other_info})
     df.to_csv(file_name + '.csv', index=True)
     
     return solutions, paths
