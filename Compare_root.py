@@ -17,7 +17,6 @@ def obtained_roots(filename,decimal_places):
     return roots
 
 
-
 def checking_roots(filename, decimal_places):
     datadf = pd.read_csv(filename, header=None)
     return [[np.around(complex(datadf[j][i].replace("im", "j").replace(" ", "")), decimal_places) for j in datadf.columns] for i in range(len(datadf))]

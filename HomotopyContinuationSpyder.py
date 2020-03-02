@@ -15,7 +15,6 @@ import itertools as it
 import time
 import iminuit as im
 import pandas as pd
-import ast as ast
 
 #import according to how many variables are needed - Ex: for 1D import x, a, b
 t,x,y, z, w, h, a,b,c,d, e, f, g,h = symbols('t,x,y, z, w, h, a,b,c,d, e,f,g,h', real = True)
@@ -71,8 +70,8 @@ A, det_4by4_matrix, inverse_4by4_matrix = define_4by4_matrix_inv_and_determinant
 
 
 def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps = 5, Newtons_method = True, expanded_functions = None, expansion_variables = None,\
-                          matrix_substitution = False, matrix_A = A, det_matrix = det_4by4_matrix, inverse_matrix = inverse_4by4_matrix, remainder_tolerance = 1e-2, tolerance_zero = 1e-6, \
-                          unique_roots = True, decimal_places = 3, newton_ratio_accuracy = 1e-10, max_newton_step = 100, debug = False, \
+                          matrix_substitution = False, matrix_A = A, det_matrix = det_4by4_matrix, inverse_matrix = inverse_4by4_matrix, remainder_tolerance = 1e-3, tolerance_zero = 1e-6, \
+                          unique_roots = True, decimal_places = 5, newton_ratio_accuracy = 1e-10, max_newton_step = 100, debug = False, \
                           save_path = False, file_name = 'Homotopy_Roots'):
     
     """
@@ -254,6 +253,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
                     #check determinant to ensure can invert
                     if dimension != 1:
                         if abs(determinant_H_func(t_new, x_old)) < tolerance_zero:
+                            print(abs(determinant_H_func(t_new, x_old)))
                             raise TypeError('3. The determinant of H is zero!')
                     
                     #find new position of root
@@ -351,17 +351,19 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
     if save_path is False:
         paths = np.full(len(solutions),'-')
     
+    num_of_roots_found = len(solutions)
+    
     #only keep all the unique roots
     if unique_roots is True:
-        num_of_roots_found = len(solutions)
+        
         solutions_rounded = np.around(solutions, decimal_places)
         solutions, unique_index = np.unique(solutions_rounded, axis=0, return_index=True)
-        num_of_unique_roots = len(solutions)
         
         #keep only the values associated to unique roots
         accuracies = [accuracies[i] for i in unique_index]
         paths = [paths[i] for i in unique_index]
         
+    num_of_unique_roots = len(solutions)
     #make root real if imaginary part is below the zero tolerance
     solutions_real = [[solutions[j][i].real for i in range(len(solutions[j])) if abs(solutions[j][i].imag) < tolerance_zero] for j in range(len(solutions))] 
     solutions_real = [solutions_real_j for solutions_real_j in (solutions_real) if len(solutions_real_j) == dimension] 
@@ -369,7 +371,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
     #save information into csv file
     other_info = ['Function Used'] + input_functions + [''] + ['Time Taken'] + [time_end - time_start] + [''] + \
     ['Root Finding Method Used'] + [method_used] + [''] + ['Worst Accuracy'] + [max_remainder_value] + \
-    [''] + ['Number of Homotopy Steps'] + [number_of_steps]  + [''] + ['Number of Roos Found'] + [num_of_roots_found] \
+    [''] + ['Number of Homotopy Steps'] + [number_of_steps]  + [''] + ['Number of Roots Found'] + [num_of_roots_found] \
     + [''] + ['Number of Unique Roots'] + [num_of_unique_roots] 
     
     len_solutions = len(solutions)
