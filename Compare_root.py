@@ -6,11 +6,13 @@ Created on Thu Feb 27 20:06:51 2020
 """
 
 import numpy as np
-#import scipy as sp
 import pandas as pd
 import ast as ast
 
 def obtained_roots(filename,decimal_places):
+    """
+    Obatain roots from our homotopy continuation in format required
+    """
     df = pd.read_csv(filename)
     roots = df['Roots']
     roots = [np.around(ast.literal_eval(roots[i]), decimal_places) for i in range(len(roots))]
@@ -19,10 +21,20 @@ def obtained_roots(filename,decimal_places):
 
 
 def checking_roots(filename, decimal_places):
+    """
+    Obtain roots from the julia implementation in format required
+    """
     datadf = pd.read_csv(filename, header=None)
     return [[np.around(complex(datadf[j][i].replace("im", "j").replace(" ", "")), decimal_places) for j in datadf.columns] for i in range(len(datadf))]
 
-def compare_values(filename1, filename2, decimal_places):    
+def compare_values(filename1, filename2, decimal_places):
+    """
+    Compares the 2 sets of roots from our implementation and that from the julia implemenation.
+    Returns the array of similar roots
+    
+    filename1: Filename of our implementation
+    filename2: Filename of julia implemenatation
+    """
     roots_we_found = obtained_roots(filename1, decimal_places)
     print('Number of our implementation Homotopy Roots : {}'.format(len(roots_we_found)))
     roots_by_other_implementation = checking_roots(filename2, decimal_places)
