@@ -20,6 +20,24 @@ import copy as cp
 #import according to how many variables are needed - Ex: for 1D import x, a, b
 t,x,y, z, w, h, a,b,c,d, e, f, g,h, l, m,n = symbols('t,x,y, z, w, h, a,b,c,d, e,f,g,h,l,m,n', real = True)
 
+#construct potential derivatives for 3HDM
+def THDM(input_variables, miu_1, miu_2, miu_3, \
+         lam_11, lam_22, lam_33, lam_12, lam_23, lam_31, lam_dash_12, lam_dash_23, lam_dash_31, \
+         m_12, m_23, m_31):
+    
+    """
+    Constructs the potential derivatives for 3HDM where the input parameters are the different coefficient constants
+    """
+    
+    dv_func = [-2*miu_1**2*input_variables[0]+2*lam_11*input_variables[0]+2*lam_12*input_variables[1]**2*input_variables[0]+2*lam_31*input_variables[2]**2*input_variables[0] \
+               +2*lam_dash_12*input_variables[1]**2*input_variables[0]+2*lam_dash_31*input_variables[2]**2*input_variables[0]+m_12**2*input_variables[1]+m_31**2*input_variables[2], \
+               -2*miu_2**2*input_variables[1]+2*lam_22*input_variables[1]+2*lam_12*input_variables[0]**2*input_variables[1]+2*lam_23*input_variables[2]**2*input_variables[1] \
+               +2*lam_dash_12*input_variables[0]**2*input_variables[1]+2*lam_dash_23*input_variables[2]**2*input_variables[1]+m_12**2*input_variables[0]+m_23**2*input_variables[2], \
+               -2*miu_3**2*input_variables[2]+2*lam_33*input_variables[2]+2*lam_23*input_variables[1]**2*input_variables[2]+2*lam_31*input_variables[0]**2*input_variables[2] \
+               +2*lam_dash_23*input_variables[1]**2*input_variables[2]+2*lam_dash_31*input_variables[0]**2*input_variables[2]+m_23**2*input_variables[1]+m_31**2*input_variables[0]]
+    return dv_func
+
+
 #construct homotopy
 def Homotopy(t, G, F, gamma):
     """
@@ -85,8 +103,8 @@ def define_6by6_matrix_inv_and_determinant(file_name):
     print('Time taken to invert and calculate determinant : {}'.format(time_start - time_end))
     return A, A_det, A_inv
 
-#A4, det_4by4_matrix, inverse_4by4_matrix = define_4by4_matrix_inv_and_determinant('A4') 
-A, det_6by6_matrix, inverse_6by6_matrix = define_6by6_matrix_inv_and_determinant('A6')
+A4, det_4by4_matrix, inverse_4by4_matrix = define_4by4_matrix_inv_and_determinant('A4') 
+#A, det_6by6_matrix, inverse_6by6_matrix = define_6by6_matrix_inv_and_determinant('A6')
 
 
 def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps = 5, Newtons_method = True, expanded_functions = None, expansion_variables = None,\
