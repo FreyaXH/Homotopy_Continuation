@@ -18,7 +18,7 @@ import pandas as pd
 import copy as cp
 
 #import according to how many variables are needed - Ex: for 1D import x, a, b
-t,x,y, z, w, h, a,b,c,d, e, f, g,h = symbols('t,x,y, z, w, h, a,b,c,d, e,f,g,h', real = True)
+t,x,y, z, w, h, a,b,c,d, e, f, g,h, l, m,n = symbols('t,x,y, z, w, h, a,b,c,d, e,f,g,h,l,m,n', real = True)
 
 #construct homotopy
 def Homotopy(t, G, F, gamma):
@@ -60,18 +60,37 @@ def G_Roots(n):
     else:
         return [i for i in it.product(root_list, repeat = n)]
 
-def define_4by4_matrix_inv_and_determinant():
+def define_4by4_matrix_inv_and_determinant(file_name):
     """
     Constructs a 4 x 4 matrix and calculates the form of the determinant and inverse. 
     """
     A = sy.Matrix(4, 4, symbols('A:4:4'))
-    return A, A.det(), A.inv()
-    
-A, det_4by4_matrix, inverse_4by4_matrix = define_4by4_matrix_inv_and_determinant()
+    A_inv = A.inv()
+    A_det = A.det()
+    df = pd.DataFrame({'A': [A], 'Determinant' : [A_det], 'Inverse': [A_inv]})
+    df.to_csv(file_name + '.csv', index=True)
+    return A, A_det, A_inv
+
+def define_6by6_matrix_inv_and_determinant(file_name):
+    """
+    Constructs a 4 x 4 matrix and calculates the form of the determinant and inverse. 
+    """
+    time_start = time.time()
+    A = sy.Matrix(6, 6, symbols('A:6:6'))
+    A_inv = A.inv()
+    A_det = A.det()
+    time_end = time.time()
+    df = pd.DataFrame({'A': [A], 'Determinant' : [A_det], 'Inverse': [A_inv]})
+    df.to_csv(file_name + '.csv', index=True)
+    print('Time taken to invert and calculate determinant : {}'.format(time_start - time_end))
+    return A, A_det, A_inv
+
+#A4, det_4by4_matrix, inverse_4by4_matrix = define_4by4_matrix_inv_and_determinant('A4') 
+A, det_6by6_matrix, inverse_6by6_matrix = define_6by6_matrix_inv_and_determinant('A6')
 
 
 def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps = 5, Newtons_method = True, expanded_functions = None, expansion_variables = None,\
-                          matrix_substitution = False, matrix_A = A, det_matrix = det_4by4_matrix, inverse_matrix = inverse_4by4_matrix, remainder_tolerance = 1e-3, tolerance_zero = 1e-6, \
+                          matrix_substitution = False, matrix_A = None, det_matrix = None, inverse_matrix = None, remainder_tolerance = 1e-3, tolerance_zero = 1e-6, \
                           decimal_places = 5, newton_ratio_accuracy = 1e-10, max_newton_step = 100, debug = False, \
                           save_path = False, file_name = 'Homotopy_Roots'):
     
@@ -150,7 +169,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
         #invert the matrix of the derivatives of H wrt to x variables
         inverse_derivative_H_wrt_x = derivative_H_wrt_x**-1
         time2 = time.time()
-        if debug: print('Time for calculation : {}'.format(time2 - time1))
+        print('Time for calculation : {}'.format(time2 - time1))
     
     else:
         time3 = time.time()
