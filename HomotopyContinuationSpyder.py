@@ -21,22 +21,83 @@ import copy as cp
 t,x,y, z, w, h, a,b,c,d, e, f, g,h, l, m,n = symbols('t,x,y, z, w, h, a,b,c,d, e,f,g,h,l,m,n', real = True)
 
 #construct potential derivatives for 3HDM
-def THDM(input_variables, miu_1, miu_2, miu_3, \
+def THDM_diff(input_variables, miu_1_square, miu_2_square, miu_3_square, \
          lam_11, lam_22, lam_33, lam_12, lam_23, lam_31, lam_dash_12, lam_dash_23, lam_dash_31, \
-         m_12, m_23, m_31):
+         m_12_square, m_23_square, m_31_square):
     
     """
     Constructs the potential derivatives for 3HDM where the input parameters are the different coefficient constants
+    The input variables must be an array of 3 dimensions
     """
     
-    dv_func = [-2*miu_1**2*input_variables[0]+2*lam_11*input_variables[0]+2*lam_12*input_variables[1]**2*input_variables[0]+2*lam_31*input_variables[2]**2*input_variables[0] \
-               +2*lam_dash_12*input_variables[1]**2*input_variables[0]+2*lam_dash_31*input_variables[2]**2*input_variables[0]+m_12**2*input_variables[1]+m_31**2*input_variables[2], \
-               -2*miu_2**2*input_variables[1]+2*lam_22*input_variables[1]+2*lam_12*input_variables[0]**2*input_variables[1]+2*lam_23*input_variables[2]**2*input_variables[1] \
-               +2*lam_dash_12*input_variables[0]**2*input_variables[1]+2*lam_dash_23*input_variables[2]**2*input_variables[1]+m_12**2*input_variables[0]+m_23**2*input_variables[2], \
-               -2*miu_3**2*input_variables[2]+2*lam_33*input_variables[2]+2*lam_23*input_variables[1]**2*input_variables[2]+2*lam_31*input_variables[0]**2*input_variables[2] \
-               +2*lam_dash_23*input_variables[1]**2*input_variables[2]+2*lam_dash_31*input_variables[0]**2*input_variables[2]+m_23**2*input_variables[1]+m_31**2*input_variables[0]]
+    dv_func = [-2*miu_1_square*input_variables[0]+2*lam_11*input_variables[0]**3 +2*lam_12*input_variables[1]**2*input_variables[0]+2*lam_31*input_variables[2]**2*input_variables[0] \
+               +2*lam_dash_12*input_variables[1]**2*input_variables[0]+2*lam_dash_31*input_variables[2]**2*input_variables[0]+m_12_square*input_variables[1]+m_31_square*input_variables[2], \
+               -2*miu_2_square*input_variables[1]+2*lam_22*input_variables[1]**3 +2*lam_12*input_variables[0]**2*input_variables[1]+2*lam_23*input_variables[2]**2*input_variables[1] \
+               +2*lam_dash_12*input_variables[0]**2*input_variables[1]+2*lam_dash_23*input_variables[2]**2*input_variables[1]+m_12_square*input_variables[0]+m_23_square*input_variables[2], \
+               -2*miu_3_square*input_variables[2]+2*lam_33*input_variables[2]**3 +2*lam_23*input_variables[1]**2*input_variables[2]+2*lam_31*input_variables[0]**2*input_variables[2] \
+               +2*lam_dash_23*input_variables[1]**2*input_variables[2]+2*lam_dash_31*input_variables[0]**2*input_variables[2]+m_23_square*input_variables[1]+m_31_square*input_variables[0]]
     return dv_func
 
+def potential_eigenvalues_symbolic(input_variables, diff_potential):
+    """
+    Returns the symbolic form of all the eignvalues for a given potential
+    """
+    Hessian_V = sy.Matrix([[diff_potential[i].diff(input_variables[j]) for j in range(len(input_variables))] for\
+                           i in range(len(input_variables))])
+        
+    eigenvalues = Hessian_V.eigenvals()
+    
+    return list(eigenvalues.keys())
+
+def potential_eigenvalues(input_variables, minima_found, diff_potential):
+    """
+    Returns all the eignvalues for a given potential
+    """
+    Hessian_V = lambdify([input_variables], sy.Matrix([[diff_potential[i].diff(input_variables[j]) for j in range(len(input_variables))] for \
+                            i in range(len(input_variables))]))
+    Hessian_V_sub_min = Hessian_V(minima_found)
+    eigenvalues = np.linalg.eigvals(Hessian_V_sub_min)
+    return eigenvalues
+
+
+def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, remainder_tolerance = 0.001, \
+                     tolerance_zero = 1e-10, decimal_places = 5, newton_ratio_accuracy = 1e-10):
+    """
+    Finds the minima of a potential given the first derivative of the potential. 
+    
+    Returns:
+        All the real minima of a potential
+        All the sum squares of the potential
+        The ratio of the different elements for each root
+        The eigenvalues of the potential
+    """
+    time_start = time.time()
+    diff_V = THDM_diff(input_variables, *parameters_guess)
+    
+    real_roots = Homotopy_Continuation(t, input_variables, diff_V, number_of_steps=num_steps_homotopy, remainder_tolerance=remainder_tolerance,\
+                                       tolerance_zero=tolerance_zero, decimal_places=decimal_places, newton_ratio_accuracy=newton_ratio_accuracy,\
+                                       save_file = False)
+    
+    print('Number of Real Roots: \n{}\n'.format(len(real_roots)))
+    
+    #deal with zero derivatives??
+    roots_ratio = [np.array(real_roots[i])/min(real_roots[i]) for i in range(len(real_roots))]
+    print('Ratio between minima found: \n{}\n'.format(roots_ratio))
+    
+    square_roots = np.square(real_roots)
+    sum_square_root_minima = [np.sqrt(sum(square_roots_i)) for square_roots_i in square_roots]
+    print('Square root of sum squares of minima : \n{}\n'.format(sum_square_root_minima))
+    
+    #eigenvalues of each minima found
+    eigenvalues_all_real_roots_square = [potential_eigenvalues(input_variables, real_roots[i], diff_V) for i in range(len(real_roots))]
+    
+    #-ve square roots
+    eigenvalues_all_real_roots = np.sqrt(eigenvalues_all_real_roots_square)
+    
+    print('Eigenvalues : \n{}\n'.format(eigenvalues_all_real_roots))
+    time_end = time.time()
+    print('Time taken to run : \n{} s'.format(time_end - time_start))
+    return real_roots, sum_square_root_minima, roots_ratio, eigenvalues_all_real_roots
 
 #construct homotopy
 def Homotopy(t, G, F, gamma):
@@ -103,14 +164,14 @@ def define_6by6_matrix_inv_and_determinant(file_name):
     print('Time taken to invert and calculate determinant : {}'.format(time_start - time_end))
     return A, A_det, A_inv
 
-A4, det_4by4_matrix, inverse_4by4_matrix = define_4by4_matrix_inv_and_determinant('A4') 
+#A4, det_4by4_matrix, inverse_4by4_matrix = define_4by4_matrix_inv_and_determinant('A4') 
 #A, det_6by6_matrix, inverse_6by6_matrix = define_6by6_matrix_inv_and_determinant('A6')
 
 
 def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps = 5, Newtons_method = True, expanded_functions = None, expansion_variables = None,\
                           matrix_substitution = False, matrix_A = None, det_matrix = None, inverse_matrix = None, remainder_tolerance = 1e-3, tolerance_zero = 1e-6, \
                           decimal_places = 5, newton_ratio_accuracy = 1e-10, max_newton_step = 100, debug = False, \
-                          save_path = False, file_name = 'Homotopy_Roots'):
+                          save_file = True, save_path = False, file_name = 'Homotopy_Roots'):
     
     """
     Perfroms the Homotopy Continuation to determine the roots of a given function F, within a certain accuracy
@@ -148,8 +209,12 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
         tolerance_zero : below this tolerance, the number is assumed to be zero
         newton_ratio_accuracy : Convergence criteria for Newton's
         max_newton_step = Max number of steps for Newton's method
+        save_file : Saves the soutions into a csv file
         save_path : Tracks and saves how roots evolve
         file_name : Save roots in file
+        
+    Returns:
+        solutions_real: The Real Roots
     """
     time_start = time.time()
     
@@ -187,7 +252,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
         #invert the matrix of the derivatives of H wrt to x variables
         inverse_derivative_H_wrt_x = derivative_H_wrt_x**-1
         time2 = time.time()
-        print('Time for calculation : {}'.format(time2 - time1))
+        if debug: print('Time for calculation : {}'.format(time2 - time1))
     
     else:
         time3 = time.time()
@@ -406,27 +471,33 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
     
     #make root real if imaginary part is below the zero tolerance
     solutions_real = [[solutions[j][i].real for i in range(len(solutions[j])) if abs(solutions[j][i].imag) < tolerance_zero] for j in range(len(solutions))] 
-    solutions_real = [solutions_real_j for solutions_real_j in (solutions_real) if len(solutions_real_j) == dimension] 
+    solutions_real = [solutions_real_j for solutions_real_j in (solutions_real) if len(solutions_real_j) == dimension]
+    solutions_real = [[0 if abs(i) < tolerance_zero else i for i in j] for j in solutions_real]
+    
+    solutions_real =  list(np.unique(np.around(solutions_real, decimal_places), axis=0))
+    
 
-    #save information into csv file
-    other_info = ['Function Used'] + input_functions + [''] + ['Time Taken'] + [time_end - time_start] + [''] + \
-    ['Root Finding Method Used'] + [method_used] + [''] + ['Worst Accuracy'] + [max_remainder_value] + \
-    [''] + ['Number of Homotopy Steps'] + [number_of_steps]  + [''] + ['Number of Roots Found'] + [num_of_roots_found] \
-    + [''] + ['Number of Unique Roots'] + [num_of_unique_roots] 
+    if save_file is True:
+        #save information into csv file
+        other_info = ['Function Used'] + input_functions + [''] + ['Time Taken'] + [time_end - time_start] + [''] + \
+        ['Root Finding Method Used'] + [method_used] + [''] + ['Worst Accuracy'] + [max_remainder_value] + \
+        [''] + ['Number of Homotopy Steps'] + [number_of_steps]  + [''] + ['Number of Roots Found'] + [num_of_roots_found] \
+        + [''] + ['Number of Unique Roots'] + [num_of_unique_roots] 
+        
+        total_length = max(len(other_info), num_of_roots_found)
+        
+        other_info = other_info + list(np.full(total_length - len(other_info), ''))
+           
+        solutions_unique = list(solutions_unique) + list(np.full(total_length - num_of_unique_roots, ''))
+        solutions_real = solutions_real + list(np.full(total_length - len(solutions_real), ''))
+        accuracies = accuracies + list(np.full(total_length - num_of_unique_roots, ''))
+        paths = list(paths) + list(np.full(total_length - num_of_unique_roots, ''))
+        solutions = solutions + list(np.full(total_length - num_of_roots_found, ''))
+        
+        df = pd.DataFrame({'Roots' : solutions, 'Unique Roots': solutions_unique, 'Real Roots' : solutions_real, 'Accuracy' : accuracies, 'Paths' : paths, 'Other Info' : other_info})
+        df.to_csv(file_name + '.csv', index=True)
     
-    total_length = max(len(other_info), num_of_roots_found)
-    
-    other_info = other_info + list(np.full(total_length - len(other_info), ''))
-       
-    solutions_unique = list(solutions_unique) + list(np.full(total_length - num_of_unique_roots, ''))
-    solutions_real = solutions_real + list(np.full(total_length - len(solutions_real), ''))
-    accuracies = accuracies + list(np.full(total_length - num_of_unique_roots, ''))
-    paths = list(paths) + list(np.full(total_length - num_of_unique_roots, ''))
-    solutions = solutions + list(np.full(total_length - num_of_roots_found, ''))
-    
-    df = pd.DataFrame({'Roots' : solutions, 'Unique Roots': solutions_unique, 'Real Roots' : solutions_real, 'Accuracy' : accuracies, 'Paths' : paths, 'Other Info' : other_info})
-    df.to_csv(file_name + '.csv', index=True)
-    
-    return solutions, paths
+    return solutions_real
 
 
+    
