@@ -20,6 +20,46 @@ import copy as cp
 #import according to how many variables are needed - Ex: for 1D import x, a, b
 t,x,y, z, w, h, a,b,c,d, e, f, g,h, l, m,n = symbols('t,x,y, z, w, h, a,b,c,d, e,f,g,h,l,m,n', real = True)
 
+def define_4by4_matrix_inv_and_determinant(file_name):
+    """
+    Constructs a 4 x 4 matrix and calculates the form of the determinant and inverse. 
+    """
+    A = sy.Matrix(4, 4, symbols('A:4:4'))
+    A_inv = A.inv()
+    A_det = A.det()
+    df = pd.DataFrame({'A': [A], 'Determinant' : [A_det], 'Inverse': [A_inv]})
+    df.to_csv(file_name + '.csv', index=True)
+    return A, A_det, A_inv
+
+def define_6by6_matrix_inv_and_determinant(file_name):
+    """
+    Constructs a 4 x 4 matrix and calculates the form of the determinant and inverse. 
+    """
+    time_start = time.time()
+    A = sy.Matrix(6, 6, symbols('A:6:6'))
+    A_inv = A.inv()
+    A_det = A.det()
+    time_end = time.time()
+    df = pd.DataFrame({'A': [A], 'Determinant' : [A_det], 'Inverse': [A_inv]})
+    df.to_csv(file_name + '.csv', index=True)
+    print('Time taken to invert and calculate determinant : {}'.format(time_start - time_end))
+    return A, A_det, A_inv
+
+def define_3by3_matrix_inv_and_determinant(file_name):
+    """
+    Constructs a 3 x 3 matrix and calculates the form of the determinant and inverse. 
+    """
+    A = sy.Matrix(3, 3, symbols('A:3:3'))
+    A_inv = A.inv()
+    A_det = A.det()
+    df = pd.DataFrame({'A': [A], 'Determinant' : [A_det], 'Inverse': [A_inv]})
+    df.to_csv(file_name + '.csv', index=True)
+    return A, A_det, A_inv
+
+#A4, det_4by4_matrix, inverse_4by4_matrix = define_4by4_matrix_inv_and_determinant('A4') 
+#A, det_6by6_matrix, inverse_6by6_matrix = define_6by6_matrix_inv_and_determinant('A6')
+A3, det_3by3_matrix, inverse_3by3_matrix = define_3by3_matrix_inv_and_determinant('A3')
+
 #construct potential derivatives for 3HDM
 def THDM_diff(input_variables, miu_1_square, miu_2_square, miu_3_square, \
          lam_11, lam_22, lam_33, lam_12, lam_23, lam_31, lam_dash_12, lam_dash_23, lam_dash_31, \
@@ -37,6 +77,20 @@ def THDM_diff(input_variables, miu_1_square, miu_2_square, miu_3_square, \
                -2*miu_3_square*input_variables[2]+4*lam_33*input_variables[2]**3 +2*lam_23*input_variables[1]**2*input_variables[2]+2*lam_31*input_variables[0]**2*input_variables[2] \
                +2*lam_dash_23*input_variables[1]**2*input_variables[2]+2*lam_dash_31*input_variables[0]**2*input_variables[2]+m_23_square*input_variables[1]+m_31_square*input_variables[0]]
     return dv_func
+
+def THDM_Potential(input_variables, miu_1_square, miu_2_square, miu_3_square, \
+         lam_11, lam_22, lam_33, lam_12, lam_23, lam_31, lam_dash_12, lam_dash_23, lam_dash_31, \
+         m_12_square, m_23_square, m_31_square):
+    """
+    Constructs the potential for 3HDM where the input parameters are the different coefficient constants
+    The input variables must be an array of 3 dimensions
+    """
+    v_func = [-miu_1_square*input_variables[0]**2-miu_2_square*input_variables[1]**2 -miu_3_square*input_variables[2]**2 +lam_11*input_variables[0]**4 +lam_22*input_variables[1]**4 +lam_33*input_variables[2]**4 \
+              + lam_12*input_variables[1]**2*input_variables[0]**2+lam_31*input_variables[2]**2*input_variables[0]**2 +lam_23*input_variables[2]**2*input_variables[1]**2  \
+               +lam_dash_12*input_variables[1]**2*input_variables[0]**2+lam_dash_31*input_variables[2]**2*input_variables[0]**2 + lam_dash_23*input_variables[2]**2*input_variables[1]**2\
+               +m_12_square*input_variables[1]*input_variables[0]+m_31_square*input_variables[2]*input_variables[0] +m_23_square*input_variables[1]*input_variables[2]]
+
+    return v_func
 
 def potential_eigenvalues_symbolic(input_variables, diff_potential):
     """
@@ -59,9 +113,18 @@ def potential_eigenvalues(input_variables, minima_found, diff_potential):
     eigenvalues = np.linalg.eigvals(Hessian_V_sub_min)
     return eigenvalues
 
-
+def global_min_index(minima_found, parameter_guess):
+    """
+    Finds the global minima index
+    """
+    
+    potential_values = [THDM_Potential(minima_found_i, *parameter_guess) for minima_found_i in minima_found]
+    global_min_index = potential_values.index(min(potential_values))
+    return global_min_index
+    
 def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, remainder_tolerance = 0.001, \
-                     tolerance_zero = 1e-10, decimal_places = 5, newton_ratio_accuracy = 1e-10):
+                     tolerance_zero = 1e-10, decimal_places = 5, matrix_substitution = True,\
+                     matrix_A = A3, det_matrix = det_3by3_matrix, inverse_matrix = inverse_3by3_matrix, newton_ratio_accuracy = 1e-5, max_newton_step = 50):
     """
     Finds the minima of a potential given the first derivative of the potential. 
     
@@ -70,15 +133,20 @@ def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, 
         All the sum squares of the potential
         The ratio of the different elements for each root
         The eigenvalues of the potential
+        The global minima
     """
     time_start = time.time()
     diff_V = THDM_diff(input_variables, *parameters_guess)
     
     real_roots = Homotopy_Continuation(t, input_variables, diff_V, number_of_steps=num_steps_homotopy, remainder_tolerance=remainder_tolerance,\
-                                       tolerance_zero=tolerance_zero, decimal_places=decimal_places, newton_ratio_accuracy=newton_ratio_accuracy,\
-                                       save_file = False)
+                                       tolerance_zero=tolerance_zero, decimal_places=decimal_places,\
+                                       save_file = False, matrix_substitution=matrix_substitution, matrix_A=matrix_A, det_matrix=det_matrix\
+                                       ,inverse_matrix=inverse_matrix, newton_ratio_accuracy = newton_ratio_accuracy, max_newton_step = max_newton_step)
     
     print('Number of Real Roots: \n{}\n'.format(len(real_roots)))
+    
+    #global minima
+    global_index = global_min_index(real_roots, parameters_guess)
     
     #deal with zero derivatives??
     roots_ratio = [np.array(real_roots[i])/min(real_roots[i]) for i in range(len(real_roots))]
@@ -95,25 +163,17 @@ def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, 
     eigenvalues_all_real_roots = np.sqrt(eigenvalues_all_real_roots_square)
     
     print('Eigenvalues : \n{}\n'.format(eigenvalues_all_real_roots))
+    
+    #global minima position, ratio, sum of square roots
+    global_results = [real_roots[global_index], roots_ratio[global_index], sum_square_root_minima[global_index]]
+    
+    print('The global minima position, ratio of three variables, and the sum-squared root of the three variables : \n{}\n'.format(global_results))
+
     time_end = time.time()
     print('Time taken to run : \n{} s'.format(time_end - time_start))
-    return real_roots, sum_square_root_minima, roots_ratio, eigenvalues_all_real_roots
-
-def THDM_Potential(input_variables, miu_1_square, miu_2_square, miu_3_square, \
-         lam_11, lam_22, lam_33, lam_12, lam_23, lam_31, lam_dash_12, lam_dash_23, lam_dash_31, \
-         m_12_square, m_23_square, m_31_square):
-    v_func = [-miu_1_square*input_variables[0]**2+lam_11*input_variables[0]**4 +lam_12*input_variables[1]**2*input_variables[0]**2+lam_31*input_variables[2]**2*input_variables[0]**2 \
-               +lam_dash_12*input_variables[1]**2*input_variables[0]**2+lam_dash_31*input_variables[2]**2*input_variables[0]**2+m_12_square*input_variables[1]*input_variables[0]+m_31_square*input_variables[2]*input_variables[0], \
-               -miu_2_square*input_variables[1]**2+lam_22*input_variables[1]**4 + lam_12*input_variables[0]**2*input_variables[1]**2+lam_23*input_variables[2]**2*input_variables[1]**2 \
-               +lam_dash_12*input_variables[0]**2*input_variables[1]**2+lam_dash_23*input_variables[2]**2*input_variables[1]**2+m_12_square*input_variables[0]*input_variables[1]+m_23_square*input_variables[2]*input_variables[1], \
-               -miu_3_square*input_variables[2]**2+lam_33*input_variables[2]**4 + lam_23*input_variables[1]**2*input_variables[2]**2 + lam_31*input_variables[0]**2*input_variables[2]**2 \
-               +lam_dash_23*input_variables[1]**2*input_variables[2]**2 + lam_dash_31*input_variables[0]**2*input_variables[2]**2 +m_23_square*input_variables[1]*input_variables[2] +m_31_square*input_variables[0]*input_variables[2]]
-    return v_func
-"""
-def Find_Deepest_Minima(input_variables, parameters_guess, num_steps_homotopy = 5, remainder_tolerance = 0.001, \
-                     tolerance_zero = 1e-10, decimal_places = 5, newton_ratio_accuracy = 1e-10):
-    potential_v = THDM_Potential(input_variables, *parameters_guess)
-"""   
+    
+    return real_roots, sum_square_root_minima, roots_ratio, eigenvalues_all_real_roots, global_results
+ 
 #construct homotopy
 def Homotopy(t, G, F, gamma):
     """
@@ -153,34 +213,6 @@ def G_Roots(n):
         return root_list
     else:
         return [i for i in it.product(root_list, repeat = n)]
-
-def define_4by4_matrix_inv_and_determinant(file_name):
-    """
-    Constructs a 4 x 4 matrix and calculates the form of the determinant and inverse. 
-    """
-    A = sy.Matrix(4, 4, symbols('A:4:4'))
-    A_inv = A.inv()
-    A_det = A.det()
-    df = pd.DataFrame({'A': [A], 'Determinant' : [A_det], 'Inverse': [A_inv]})
-    df.to_csv(file_name + '.csv', index=True)
-    return A, A_det, A_inv
-
-def define_6by6_matrix_inv_and_determinant(file_name):
-    """
-    Constructs a 4 x 4 matrix and calculates the form of the determinant and inverse. 
-    """
-    time_start = time.time()
-    A = sy.Matrix(6, 6, symbols('A:6:6'))
-    A_inv = A.inv()
-    A_det = A.det()
-    time_end = time.time()
-    df = pd.DataFrame({'A': [A], 'Determinant' : [A_det], 'Inverse': [A_inv]})
-    df.to_csv(file_name + '.csv', index=True)
-    print('Time taken to invert and calculate determinant : {}'.format(time_start - time_end))
-    return A, A_det, A_inv
-
-#A4, det_4by4_matrix, inverse_4by4_matrix = define_4by4_matrix_inv_and_determinant('A4') 
-#A, det_6by6_matrix, inverse_6by6_matrix = define_6by6_matrix_inv_and_determinant('A6')
 
 
 def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps = 5, Newtons_method = True, expanded_functions = None, expansion_variables = None,\
