@@ -124,7 +124,8 @@ def global_min_index(minima_found, parameter_guess):
     
 def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, remainder_tolerance = 0.001, \
                      tolerance_zero = 1e-10, decimal_places = 5, matrix_substitution = True,\
-                     matrix_A = A3, det_matrix = det_3by3_matrix, inverse_matrix = inverse_3by3_matrix, newton_ratio_accuracy = 1e-5, max_newton_step = 50):
+                     matrix_A = A3, det_matrix = det_3by3_matrix, inverse_matrix = inverse_3by3_matrix, newton_ratio_accuracy = 1e-5, max_newton_step = 50,\
+                     debug = True, save_file = False, file_name = ''):
     """
     Finds the minima of a potential given the first derivative of the potential. 
     
@@ -132,7 +133,7 @@ def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, 
         All the real minima of a potential
         All the sum squares of the potential
         The ratio of the different elements for each root
-        The eigenvalues of the potential
+        The eigenvalues of the potential related to the minima
         The global minima
     """
     time_start = time.time()
@@ -140,51 +141,89 @@ def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, 
     
     real_roots = Homotopy_Continuation(t, input_variables, diff_V, number_of_steps=num_steps_homotopy, remainder_tolerance=remainder_tolerance,\
                                        tolerance_zero=tolerance_zero, decimal_places=decimal_places,\
-                                       save_file = False, matrix_substitution=matrix_substitution, matrix_A=matrix_A, det_matrix=det_matrix\
-                                       ,inverse_matrix=inverse_matrix, newton_ratio_accuracy = newton_ratio_accuracy, max_newton_step = max_newton_step)
-    print('Number of Real Roots: \n{}\n'.format(len(real_roots)))
-        
+                                       matrix_substitution=matrix_substitution, matrix_A=matrix_A, det_matrix=det_matrix\
+                                       ,inverse_matrix=inverse_matrix, newton_ratio_accuracy = newton_ratio_accuracy, max_newton_step = max_newton_step,\
+                                       save_file = save_file, file_name = file_name + '_Homotopy')
+    
     #eigenvalues of each minima found
     eigenvalues_all_real_roots_square = [potential_eigenvalues(input_variables, real_roots[i], diff_V) for i in range(len(real_roots))]
-    
-    #-ve square roots
-    eigenvalues_all_real_roots = np.sqrt(eigenvalues_all_real_roots_square)
-    
+      
     #find the real positive eigenvalues 
-    real_positive_eigenvalues = []
-    indices = []
-    for j in range(len(eigenvalues_all_real_roots)):
-        if all(i>0 for i in eigenvalues_all_real_roots[j]) is True:
-            real_positive_eigenvalues.append(eigenvalues_all_real_roots[j])
-            indices.append(j)
-    #slicing accordingly
-    actual_real_roots = []
-    for i in indices:
-        actual_real_roots.append(real_roots[i])
-        
-    print('Real Positive Eigenvalues : \n{}\n'.format(real_positive_eigenvalues))
-        
-    #deal with zero derivatives??
-    roots_ratio = [np.array(actual_real_roots[i])/min(actual_real_roots[i]) for i in range(len(actual_real_roots))]
-    print('Ratio between minima found: \n{}\n'.format(roots_ratio))
+    index_min_position = [j for j in range(len(eigenvalues_all_real_roots_square)) if all(i>0 for i in eigenvalues_all_real_roots_square[j]) is True]
+
+    #slicing roots and eigenvalues accordingly
+    minima_points = [real_roots[i] for i in index_min_position]
+    eigenvalues_minima_square = [eigenvalues_all_real_roots_square[i] for i in index_min_position]
     
-    square_roots = np.square(actual_real_roots)
+    #take square roots
+    eigenvalues_minima = np.sqrt(eigenvalues_minima_square)
+      
+    #find the ratio between the roots
+    roots_ratio = [np.array(minima_points[i])/min(minima_points[i]) for i in range(len(minima_points))]
+    
+    square_roots = np.square(minima_points)
     sum_square_root_minima = [np.sqrt(sum(square_roots_i)) for square_roots_i in square_roots]
-    print('Square root of sum squares of minima : \n{}\n'.format(sum_square_root_minima))
-            
+    
     #global minima
-    global_index = global_min_index(actual_real_roots, parameters_guess)
+    global_index = global_min_index(minima_points, parameters_guess)
     
-    #global minima position, ratio, sum of square roots
-    global_results = [actual_real_roots[global_index], roots_ratio[global_index], sum_square_root_minima[global_index]]
+    #global minima position
+    global_min = minima_points[global_index]
     
-    print('The global minima position, ratio of three variables, and the sum-squared root of the three variables : \n{}\n'.format(global_results))
+    #find the cloest eigenvalue to 125
+    closest_eigenvalue_per_min = np.array([min(abs((np.array(i) - 125))) for i in eigenvalues_minima])
+
+    #find closest sum square root to 246
+    closest_sum_square_per_min = abs(np.array(sum_square_root_minima) - 246)
+    
+    cost_function_min = min((closest_eigenvalue_per_min + closest_sum_square_per_min)*-1)
+    
+    if debug:
+        print('Number of Real Roots Found: \n{}\n'.format(len(real_roots)))
+        print('Positions of the Minima : \n{}\n'.format(minima_points))
+        print('Eigenvalues of the Minima : \n{}\n'.format(eigenvalues_minima))
+        print('Ratio between minima found: \n{}\n'.format(roots_ratio))
+        print('Square root of sum squares of minima : \n{}\n'.format(sum_square_root_minima))
+        print('The global minima position : \n{}\n'.format(global_min))
+        print('Minimum Cost Function : {}'.format(cost_function_min))
 
     time_end = time.time()
-    print('Time taken to run : \n{} s'.format(time_end - time_start))
+    if debug: print('Time taken to run : \n{} s'.format(time_end - time_start))
     
-    return real_roots, real_positive_eigenvalues, sum_square_root_minima, roots_ratio, eigenvalues_all_real_roots, global_results
- 
+    if save_file is True:
+        #save information into csv file
+        other_info =  ['Cost Function Min'] + [cost_function_min] + [''] + ['Global Minima'] + [global_min] + [''] +\
+        ['Time Taken'] + [time_end - time_start] + [''] + ['Number of Real Roots Found'] + [len(real_roots)] \
+        + [''] + ['Number of Minima'] + [len(minima_points)] 
+        
+        total_length = max(len(other_info), len(real_roots))
+        
+        other_info = other_info + list(np.full(total_length - len(other_info), ''))
+           
+        real_roots_s = list(real_roots) + list(np.full(total_length - len(real_roots), ''))
+        eigenvalues_all_real_roots_square_s = list(eigenvalues_all_real_roots_square) + list(np.full(total_length - len(real_roots), ''))
+        minima_points_s = minima_points + list(np.full(total_length - len(minima_points), ''))
+        eigenvalues_minima_s = list(eigenvalues_minima) + list(np.full(total_length - len(minima_points), ''))
+        roots_ratio_s = list(roots_ratio) + list(np.full(total_length - len(minima_points), ''))
+        sum_square_root_minima_s = sum_square_root_minima + list(np.full(total_length - len(minima_points), ''))
+        
+        df = pd.DataFrame({'Real Roots' : real_roots_s, 'All eigenvalues Square' : eigenvalues_all_real_roots_square_s, 'Minima': minima_points_s, 'Eigenvalues of minima' : eigenvalues_minima_s, 'Ratio of roots' : roots_ratio_s, 'Sum Square Root' : sum_square_root_minima_s, 'Other Info' : other_info})
+        df.to_csv(file_name + '.csv', index=True)
+        
+    return cost_function_min
+
+def cost_function(miu_1_square, miu_2_square, miu_3_square, \
+         lam_11, lam_22, lam_33, lam_12, lam_23, lam_31, lam_dash_12, lam_dash_23, lam_dash_31, \
+         m_12_square, m_23_square, m_31_square):
+    """
+    Computes the cost function for the potential for a given set of paramters
+    """
+    parameters_initial = [miu_1_square, miu_2_square, miu_3_square, \
+         lam_11, lam_22, lam_33, lam_12, lam_23, lam_31, lam_dash_12, lam_dash_23, lam_dash_31, \
+         m_12_square, m_23_square, m_31_square]
+    
+    return roots_Polynomial([x,y,z], parameters_initial, debug = False, save_file = False)
+
 #construct homotopy
 def Homotopy(t, G, F, gamma):
     """
@@ -547,13 +586,13 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
         
         other_info = other_info + list(np.full(total_length - len(other_info), ''))
            
-        solutions_unique = list(solutions_unique) + list(np.full(total_length - num_of_unique_roots, ''))
-        solutions_real = solutions_real + list(np.full(total_length - len(solutions_real), ''))
-        accuracies = accuracies + list(np.full(total_length - num_of_unique_roots, ''))
-        paths = list(paths) + list(np.full(total_length - num_of_unique_roots, ''))
-        solutions = solutions + list(np.full(total_length - num_of_roots_found, ''))
+        solutions_unique_s = list(solutions_unique) + list(np.full(total_length - num_of_unique_roots, ''))
+        solutions_real_s = solutions_real + list(np.full(total_length - len(solutions_real), ''))
+        accuracies_s = accuracies + list(np.full(total_length - num_of_unique_roots, ''))
+        paths_s = list(paths) + list(np.full(total_length - num_of_unique_roots, ''))
+        solutions_s = solutions + list(np.full(total_length - num_of_roots_found, ''))
         
-        df = pd.DataFrame({'Roots' : solutions, 'Unique Roots': solutions_unique, 'Real Roots' : solutions_real, 'Accuracy' : accuracies, 'Paths' : paths, 'Other Info' : other_info})
+        df = pd.DataFrame({'Roots' : solutions_s, 'Unique Roots': solutions_unique_s, 'Real Roots' : solutions_real_s, 'Accuracy' : accuracies_s, 'Paths' : paths_s, 'Other Info' : other_info})
         df.to_csv(file_name + '.csv', index=True)
     
     return solutions_real
