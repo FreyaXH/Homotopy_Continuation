@@ -142,37 +142,48 @@ def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, 
                                        tolerance_zero=tolerance_zero, decimal_places=decimal_places,\
                                        save_file = False, matrix_substitution=matrix_substitution, matrix_A=matrix_A, det_matrix=det_matrix\
                                        ,inverse_matrix=inverse_matrix, newton_ratio_accuracy = newton_ratio_accuracy, max_newton_step = max_newton_step)
-    
     print('Number of Real Roots: \n{}\n'.format(len(real_roots)))
-    
-    #global minima
-    global_index = global_min_index(real_roots, parameters_guess)
-    
-    #deal with zero derivatives??
-    roots_ratio = [np.array(real_roots[i])/min(real_roots[i]) for i in range(len(real_roots))]
-    print('Ratio between minima found: \n{}\n'.format(roots_ratio))
-    
-    square_roots = np.square(real_roots)
-    sum_square_root_minima = [np.sqrt(sum(square_roots_i)) for square_roots_i in square_roots]
-    print('Square root of sum squares of minima : \n{}\n'.format(sum_square_root_minima))
-    
+        
     #eigenvalues of each minima found
     eigenvalues_all_real_roots_square = [potential_eigenvalues(input_variables, real_roots[i], diff_V) for i in range(len(real_roots))]
     
     #-ve square roots
     eigenvalues_all_real_roots = np.sqrt(eigenvalues_all_real_roots_square)
     
-    print('Eigenvalues : \n{}\n'.format(eigenvalues_all_real_roots))
+    #find the real positive eigenvalues 
+    real_positive_eigenvalues = []
+    indices = []
+    for j in range(len(eigenvalues_all_real_roots)):
+        if all(i>0 for i in eigenvalues_all_real_roots[j]) is True:
+            real_positive_eigenvalues.append(eigenvalues_all_real_roots[j])
+            indices.append(j)
+    #slicing accordingly
+    actual_real_roots = []
+    for i in indices:
+        actual_real_roots.append(real_roots[i])
+        
+    print('Real Positive Eigenvalues : \n{}\n'.format(real_positive_eigenvalues))
+        
+    #deal with zero derivatives??
+    roots_ratio = [np.array(actual_real_roots[i])/min(actual_real_roots[i]) for i in range(len(actual_real_roots))]
+    print('Ratio between minima found: \n{}\n'.format(roots_ratio))
+    
+    square_roots = np.square(actual_real_roots)
+    sum_square_root_minima = [np.sqrt(sum(square_roots_i)) for square_roots_i in square_roots]
+    print('Square root of sum squares of minima : \n{}\n'.format(sum_square_root_minima))
+            
+    #global minima
+    global_index = global_min_index(actual_real_roots, parameters_guess)
     
     #global minima position, ratio, sum of square roots
-    global_results = [real_roots[global_index], roots_ratio[global_index], sum_square_root_minima[global_index]]
+    global_results = [actual_real_roots[global_index], roots_ratio[global_index], sum_square_root_minima[global_index]]
     
     print('The global minima position, ratio of three variables, and the sum-squared root of the three variables : \n{}\n'.format(global_results))
 
     time_end = time.time()
     print('Time taken to run : \n{} s'.format(time_end - time_start))
     
-    return real_roots, sum_square_root_minima, roots_ratio, eigenvalues_all_real_roots, global_results
+    return real_roots, real_positive_eigenvalues, sum_square_root_minima, roots_ratio, eigenvalues_all_real_roots, global_results
  
 #construct homotopy
 def Homotopy(t, G, F, gamma):
@@ -282,7 +293,8 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
     
     #generate gamma
     gamma = Gamma_Generator()
-    
+    #print(gamma)
+    #gamma = 0.1890852662170326+0.9819606723793137j
     #determine roots of easy polynomial
     G_roots = G_Roots(dimension)
 
@@ -545,6 +557,7 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
         df.to_csv(file_name + '.csv', index=True)
     
     return solutions_real
+
 
 
     
