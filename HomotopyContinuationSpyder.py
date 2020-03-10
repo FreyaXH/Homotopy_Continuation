@@ -30,11 +30,11 @@ def THDM_diff(input_variables, miu_1_square, miu_2_square, miu_3_square, \
     The input variables must be an array of 3 dimensions
     """
     
-    dv_func = [-2*miu_1_square*input_variables[0]+2*lam_11*input_variables[0]**3 +2*lam_12*input_variables[1]**2*input_variables[0]+2*lam_31*input_variables[2]**2*input_variables[0] \
+    dv_func = [-2*miu_1_square*input_variables[0]+4*lam_11*input_variables[0]**3 +2*lam_12*input_variables[1]**2*input_variables[0]+2*lam_31*input_variables[2]**2*input_variables[0] \
                +2*lam_dash_12*input_variables[1]**2*input_variables[0]+2*lam_dash_31*input_variables[2]**2*input_variables[0]+m_12_square*input_variables[1]+m_31_square*input_variables[2], \
-               -2*miu_2_square*input_variables[1]+2*lam_22*input_variables[1]**3 +2*lam_12*input_variables[0]**2*input_variables[1]+2*lam_23*input_variables[2]**2*input_variables[1] \
+               -2*miu_2_square*input_variables[1]+4*lam_22*input_variables[1]**3 +2*lam_12*input_variables[0]**2*input_variables[1]+2*lam_23*input_variables[2]**2*input_variables[1] \
                +2*lam_dash_12*input_variables[0]**2*input_variables[1]+2*lam_dash_23*input_variables[2]**2*input_variables[1]+m_12_square*input_variables[0]+m_23_square*input_variables[2], \
-               -2*miu_3_square*input_variables[2]+2*lam_33*input_variables[2]**3 +2*lam_23*input_variables[1]**2*input_variables[2]+2*lam_31*input_variables[0]**2*input_variables[2] \
+               -2*miu_3_square*input_variables[2]+4*lam_33*input_variables[2]**3 +2*lam_23*input_variables[1]**2*input_variables[2]+2*lam_31*input_variables[0]**2*input_variables[2] \
                +2*lam_dash_23*input_variables[1]**2*input_variables[2]+2*lam_dash_31*input_variables[0]**2*input_variables[2]+m_23_square*input_variables[1]+m_31_square*input_variables[0]]
     return dv_func
 
@@ -99,6 +99,21 @@ def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, 
     print('Time taken to run : \n{} s'.format(time_end - time_start))
     return real_roots, sum_square_root_minima, roots_ratio, eigenvalues_all_real_roots
 
+def THDM_Potential(input_variables, miu_1_square, miu_2_square, miu_3_square, \
+         lam_11, lam_22, lam_33, lam_12, lam_23, lam_31, lam_dash_12, lam_dash_23, lam_dash_31, \
+         m_12_square, m_23_square, m_31_square):
+    v_func = [-miu_1_square*input_variables[0]**2+lam_11*input_variables[0]**4 +lam_12*input_variables[1]**2*input_variables[0]**2+lam_31*input_variables[2]**2*input_variables[0]**2 \
+               +lam_dash_12*input_variables[1]**2*input_variables[0]**2+lam_dash_31*input_variables[2]**2*input_variables[0]**2+m_12_square*input_variables[1]*input_variables[0]+m_31_square*input_variables[2]*input_variables[0], \
+               -miu_2_square*input_variables[1]**2+lam_22*input_variables[1]**4 + lam_12*input_variables[0]**2*input_variables[1]**2+lam_23*input_variables[2]**2*input_variables[1]**2 \
+               +lam_dash_12*input_variables[0]**2*input_variables[1]**2+lam_dash_23*input_variables[2]**2*input_variables[1]**2+m_12_square*input_variables[0]*input_variables[1]+m_23_square*input_variables[2]*input_variables[1], \
+               -miu_3_square*input_variables[2]**2+lam_33*input_variables[2]**4 + lam_23*input_variables[1]**2*input_variables[2]**2 + lam_31*input_variables[0]**2*input_variables[2]**2 \
+               +lam_dash_23*input_variables[1]**2*input_variables[2]**2 + lam_dash_31*input_variables[0]**2*input_variables[2]**2 +m_23_square*input_variables[1]*input_variables[2] +m_31_square*input_variables[0]*input_variables[2]]
+    return v_func
+"""
+def Find_Deepest_Minima(input_variables, parameters_guess, num_steps_homotopy = 5, remainder_tolerance = 0.001, \
+                     tolerance_zero = 1e-10, decimal_places = 5, newton_ratio_accuracy = 1e-10):
+    potential_v = THDM_Potential(input_variables, *parameters_guess)
+"""   
 #construct homotopy
 def Homotopy(t, G, F, gamma):
     """
