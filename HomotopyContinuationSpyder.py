@@ -176,7 +176,7 @@ def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, 
     #find closest sum square root to 246
     closest_sum_square_per_min = abs(np.array(sum_square_root_minima) - 246)
     
-    cost_function_min = min((closest_eigenvalue_per_min + closest_sum_square_per_min)*-1)
+    cost_function_min = min((closest_eigenvalue_per_min + closest_sum_square_per_min))
     
     if debug:
         print('Number of Real Roots Found: \n{}\n'.format(len(real_roots)))
