@@ -274,16 +274,16 @@ def roots_Polynomial_conscise(input_variables, parameters_guess, num_steps_homot
             square_roots = np.square(minima_points)
             square_roots_sort = np.sort(square_roots)
             roots_ratio = [abs(((min_pt_i[2]/min_pt_i[2]) - 130**2)/130**2) + abs(((min_pt_i[1]/min_pt_i[0]) - 420**2)/420**2) + abs(((min_pt_i[2]/min_pt_i[0]) - 57300**2)/57300**2) for min_pt_i in square_roots_sort]
-            print(roots_ratio)
+            #print(roots_ratio)
             sum_square_minima = [sum(square_roots_i) for square_roots_i in square_roots]
            
             #find the cloest eigenvalue to 125
             closest_eigenvalue_per_min = np.array([min(abs((np.array(i) - 125**2))/125**2) for i in eigenvalues_minima_square])
-            print(closest_eigenvalue_per_min)
+            #print(closest_eigenvalue_per_min)
             #find closest sum square root to 246
             closest_sum_square_per_min = abs(np.array(sum_square_minima) - 246**2)/246**2
-            print(closest_sum_square_per_min)
-            cost_function_min = min((closest_eigenvalue_per_min + closest_sum_square_per_min + roots_ratio))
+            #print(closest_sum_square_per_min)
+            cost_function_min = min((closest_sum_square_per_min + roots_ratio))
                     
     return cost_function_min
 
@@ -303,17 +303,24 @@ def cost_function(miu_1_square, miu_2_square, miu_3_square, \
 def Iminuit_Optimize(miu_1_square, miu_2_square, miu_3_square, \
          lam_11, lam_22, lam_33, lam_12, lam_23, lam_31, lam_dash_12, lam_dash_23, lam_dash_31, \
          m_12_square, m_23_square, m_31_square):
-
+    
+    time_start = time.time()
     minimize_cost_function = im.Minuit(cost_function, miu_1_square = miu_1_square, miu_2_square = miu_2_square, miu_3_square =miu_3_square, \
          lam_11 = lam_11, lam_22 = lam_22, lam_33 =lam_33, lam_12 =lam_12, lam_23 = lam_23, lam_31 =lam_31, lam_dash_12=lam_dash_12, lam_dash_23 =lam_dash_23 , lam_dash_31=lam_dash_31, \
          m_12_square=m_12_square, m_23_square =m_23_square, m_31_square=m_31_square, \
          limit_miu_1_square = (0.1e5, 2e5), limit_miu_2_square = (0.1e5,2e5), limit_miu_3_square = (0.1e5, 2e5),\
          limit_lam_11 = (0.1,7), limit_lam_22 = (0.1,7), limit_lam_33 = (0.1,7), limit_lam_12 =(-4*np.pi,4*np.pi), limit_lam_23 = (-8,4*np.pi), limit_lam_31 =(-8,4*np.pi), limit_lam_dash_12=(-4*np.pi,4*np.pi), limit_lam_dash_23 =(-4*np.pi , 8), limit_lam_dash_31=(-4*np.pi, 8),\
          limit_m_12_square=(-1.5e5,1.5e5), limit_m_23_square =(-1.5e5, 1.5e5) , limit_m_31_square=(-4e5,-0.1e5),
+         error_miu_1_square = 0.5e5, error_miu_2_square = 0.5e5, error_miu_3_square = 0.5e5,\
+         error_lam_11 = 2, error_lam_22 = 2, error_lam_33 = 2, error_lam_12 =2, error_lam_23 = 2, error_lam_31 =2, error_lam_dash_12=2, error_lam_dash_23 =2, error_lam_dash_31=2,\
+         error_m_12_square=0.5e5, error_m_23_square =0.5e5 , error_m_31_square=0.5e5,
          errordef=1)
-    minimize_cost_function.migrad(ncall=5)
-
-    return minimize_cost_function.get_fmin(), minimize_cost_function.get_param_states(), minimize_cost_function.values
+    minimize_cost_function.migrad(ncall=1)
+    time_end = time.time()
+    
+    print(minimize_cost_function.get_fmin())
+    print(minimize_cost_function.get_param_states())
+    return minimize_cost_function.get_fmin(), minimize_cost_function.get_param_states(), time_end-time_start
 
 def Uncoupled_potential(input_variables, miu_1_square,miu_2_square,miu_3_square,lam_11,lam_22,lam_33):
     v_func = -miu_1_square*input_variables[0]**2-miu_2_square*input_variables[1]**2 -miu_3_square*input_variables[2]**2 +lam_11*input_variables[0]**4 +lam_22*input_variables[1]**4 +lam_33*input_variables[2]**4
@@ -333,10 +340,13 @@ def cost_func_scipy(parameters):
     return roots_Polynomial_conscise([x,y,z], parameters)
 
 def scipy_optimise(func, parameters):
+    
     bounds = [(0.1e5, 2e5), (0.1e5,2e5), (0.1e5, 2e5),(0.1,7), (0.1,7), (0.1,7), (-4*np.pi,4*np.pi), (-8,4*np.pi), \
               (-8,4*np.pi), (-4*np.pi,4*np.pi), (-4*np.pi , 8), (-4*np.pi, 8), (-1.5e5,1.5e5), (-1.5e5, 1.5e5) , (-4e5,-0.1e5)]
+    time_start = time.time()
     result = so.differential_evolution(func, bounds, maxiter=1)
-    return result.x, result.fun
+    time_end = time.time()
+    return result.x, result.fun, time_end-time_start
 
 #construct homotopy
 def Homotopy(t, G, F, gamma):
