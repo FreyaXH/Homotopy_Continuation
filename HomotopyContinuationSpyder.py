@@ -92,6 +92,7 @@ def THDM_Potential(input_variables, miu_1_square, miu_2_square, miu_3_square, \
 
     return v_func
 
+
 def potential_eigenvalues_symbolic(input_variables, diff_potential):
     """
     Returns the symbolic form of all the eignvalues for a given potential
@@ -150,65 +151,69 @@ def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, 
       
     #find the real positive eigenvalues 
     index_min_position = [j for j in range(len(eigenvalues_all_real_roots_square)) if all(i>0 for i in eigenvalues_all_real_roots_square[j]) is True]
-
-    #slicing roots and eigenvalues accordingly
-    minima_points = [real_roots[i] for i in index_min_position]
-    eigenvalues_minima_square = [eigenvalues_all_real_roots_square[i] for i in index_min_position]
-    
-    #take square roots
-    eigenvalues_minima = np.sqrt(eigenvalues_minima_square)
-      
-    #find the ratio between the roots
-    roots_ratio = [np.array(minima_points[i])/min(minima_points[i]) for i in range(len(minima_points))]
-    
-    square_roots = np.square(minima_points)
-    sum_square_root_minima = [np.sqrt(sum(square_roots_i)) for square_roots_i in square_roots]
-    
-    #global minima
-    global_index = global_min_index(minima_points, parameters_guess)
-    
-    #global minima position
-    global_min = minima_points[global_index]
-    
-    #find the cloest eigenvalue to 125
-    closest_eigenvalue_per_min = np.array([min(abs((np.array(i) - 125))) for i in eigenvalues_minima])
-
-    #find closest sum square root to 246
-    closest_sum_square_per_min = abs(np.array(sum_square_root_minima) - 246)
-    
-    cost_function_min = min((closest_eigenvalue_per_min + closest_sum_square_per_min))
-    
-    if debug:
-        print('Number of Real Roots Found: \n{}\n'.format(len(real_roots)))
-        print('Positions of the Minima : \n{}\n'.format(minima_points))
-        print('Eigenvalues of the Minima : \n{}\n'.format(eigenvalues_minima))
-        print('Ratio between minima found: \n{}\n'.format(roots_ratio))
-        print('Square root of sum squares of minima : \n{}\n'.format(sum_square_root_minima))
-        print('The global minima position : \n{}\n'.format(global_min))
-        print('Minimum Cost Function : {}'.format(cost_function_min))
-
-    time_end = time.time()
-    if debug: print('Time taken to run : \n{} s'.format(time_end - time_start))
-    
-    if save_file is True:
-        #save information into csv file
-        other_info =  ['Cost Function Min'] + [cost_function_min] + [''] + ['Global Minima'] + [global_min] + [''] +\
-        ['Time Taken'] + [time_end - time_start] + [''] + ['Number of Real Roots Found'] + [len(real_roots)] \
-        + [''] + ['Number of Minima'] + [len(minima_points)] 
+    if len(index_min_position) == 0:
+        cost_function_min = 10000
+    else:
+        #slicing roots and eigenvalues accordingly
+        minima_points = [real_roots[i] for i in index_min_position]
+        eigenvalues_minima_square = [eigenvalues_all_real_roots_square[i] for i in index_min_position]
         
-        total_length = max(len(other_info), len(real_roots))
+        #take square roots
+        eigenvalues_minima = np.sqrt(eigenvalues_minima_square)
+          
+
+        #find the ratio between the roots
+        roots_abs = np.sort(abs(np.array(minima_points)))
+        roots_ratio = [abs(((min_pt_i[2]/min_pt_i[2]) - 130)/130) + abs(((min_pt_i[1]/min_pt_i[0]) - 420)/420) + abs(((min_pt_i[2]/min_pt_i[0]) - 57300)/57300) for min_pt_i in roots_abs]
+    
+        square_roots = np.square(minima_points)
+        sum_square_root_minima = [np.sqrt(sum(square_roots_i)) for square_roots_i in square_roots]
+       
+        #global minima
+        global_index = global_min_index(minima_points, parameters_guess)
+       
+        #global minima position
+        global_min = minima_points[global_index]
+       
+        #find the cloest eigenvalue to 125
+        closest_eigenvalue_per_min = np.array([min(abs((np.array(i) - 125))/125) for i in eigenvalues_minima])
+    
+        #find closest sum square root to 246
+        closest_sum_square_per_min = abs(np.array(sum_square_root_minima) - 246)/246
+       
+        cost_function_min = min((closest_eigenvalue_per_min + closest_sum_square_per_min + roots_ratio))
+    
+        if debug:
+            print('Number of Real Roots Found: \n{}\n'.format(len(real_roots)))
+            print('Positions of the Minima : \n{}\n'.format(minima_points))
+            print('Eigenvalues of the Minima : \n{}\n'.format(eigenvalues_minima))
+            print('Ratio between minima found: \n{}\n'.format(roots_ratio))
+            print('Square root of sum squares of minima : \n{}\n'.format(sum_square_root_minima))
+            print('The global minima position : \n{}\n'.format(global_min))
+            print('Minimum Cost Function : {}'.format(cost_function_min))
+    
+        time_end = time.time()
+        if debug: print('Time taken to run : \n{} s'.format(time_end - time_start))
         
-        other_info = other_info + list(np.full(total_length - len(other_info), ''))
-           
-        real_roots_s = list(real_roots) + list(np.full(total_length - len(real_roots), ''))
-        eigenvalues_all_real_roots_square_s = list(eigenvalues_all_real_roots_square) + list(np.full(total_length - len(real_roots), ''))
-        minima_points_s = minima_points + list(np.full(total_length - len(minima_points), ''))
-        eigenvalues_minima_s = list(eigenvalues_minima) + list(np.full(total_length - len(minima_points), ''))
-        roots_ratio_s = list(roots_ratio) + list(np.full(total_length - len(minima_points), ''))
-        sum_square_root_minima_s = sum_square_root_minima + list(np.full(total_length - len(minima_points), ''))
-        
-        df = pd.DataFrame({'Real Roots' : real_roots_s, 'All eigenvalues Square' : eigenvalues_all_real_roots_square_s, 'Minima': minima_points_s, 'Eigenvalues of minima' : eigenvalues_minima_s, 'Ratio of roots' : roots_ratio_s, 'Sum Square Root' : sum_square_root_minima_s, 'Other Info' : other_info})
-        df.to_csv(file_name + '.csv', index=True)
+        if save_file is True:
+            #save information into csv file
+            other_info =  ['Cost Function Min'] + [cost_function_min] + [''] + ['Global Minima'] + [global_min] + [''] +\
+            ['Time Taken'] + [time_end - time_start] + [''] + ['Number of Real Roots Found'] + [len(real_roots)] \
+            + [''] + ['Number of Minima'] + [len(minima_points)] 
+            
+            total_length = max(len(other_info), len(real_roots))
+            
+            other_info = other_info + list(np.full(total_length - len(other_info), ''))
+               
+            real_roots_s = list(real_roots) + list(np.full(total_length - len(real_roots), ''))
+            eigenvalues_all_real_roots_square_s = list(eigenvalues_all_real_roots_square) + list(np.full(total_length - len(real_roots), ''))
+            minima_points_s = minima_points + list(np.full(total_length - len(minima_points), ''))
+            eigenvalues_minima_s = list(eigenvalues_minima) + list(np.full(total_length - len(minima_points), ''))
+            roots_ratio_s = list(roots_ratio) + list(np.full(total_length - len(minima_points), ''))
+            sum_square_root_minima_s = sum_square_root_minima + list(np.full(total_length - len(minima_points), ''))
+            
+            df = pd.DataFrame({'Real Roots' : real_roots_s, 'All eigenvalues Square' : eigenvalues_all_real_roots_square_s, 'Minima': minima_points_s, 'Eigenvalues of minima' : eigenvalues_minima_s, 'Ratio of roots' : roots_ratio_s, 'Sum Square Root' : sum_square_root_minima_s, 'Other Info' : other_info})
+            df.to_csv(file_name + '.csv', index=True)
         
     return cost_function_min
 
@@ -597,6 +602,18 @@ def Homotopy_Continuation(t, input_variables, input_functions, number_of_steps =
     
     return solutions_real
 
+def Iminuit_Optimize(miu_1_square, miu_2_square, miu_3_square, \
+         lam_11, lam_22, lam_33, lam_12, lam_23, lam_31, lam_dash_12, lam_dash_23, lam_dash_31, \
+         m_12_square, m_23_square, m_31_square):
 
+    minimize_cost_function = im.Minuit(cost_function, miu_1_square = miu_1_square, miu_2_square = miu_2_square, miu_3_square =miu_3_square, \
+         lam_11 = lam_11, lam_22 = lam_22, lam_33 =lam_33, lam_12 =lam_12, lam_23 = lam_23, lam_31 =lam_31, lam_dash_12=lam_dash_12, lam_dash_23 =lam_dash_23 , lam_dash_31=lam_dash_31, \
+         m_12_square=m_12_square, m_23_square =m_23_square, m_31_square=m_31_square, \
+         limit_miu_1_square = (0.1e5, 2e5), limit_miu_2_square = (0.1e5,2e5), limit_miu_3_square = (0.1e5, 2e5),\
+         limit_lam_11 = (0.1,7), limit_lam_22 = (0.1,7), limit_lam_33 = (0.1,7), limit_lam_12 =(-4*np.pi,4*np.pi), limit_lam_23 = (-8,4*np.pi), limit_lam_31 =(-8,4*np.pi), limit_lam_dash_12=(-4*np.pi,4*np.pi), limit_lam_dash_23 =(-4*np.pi , 8), limit_lam_dash_31=(-4*np.pi, 8),\
+         limit_m_12_square=(-1.5e5,1.5e5), limit_m_23_square =(-1.5e5, 1.5e5) , limit_m_31_square=(-4e5,-0.1e5),
+         errordef=1)
+    minimize_cost_function.migrad(ncall=5)
 
-    
+    return minimize_cost_function.get_fmin(), minimize_cost_function.get_param_states(), m.values
+
