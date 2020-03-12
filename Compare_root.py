@@ -18,8 +18,6 @@ def obtained_roots(filename,decimal_places):
     roots = [np.around(ast.literal_eval(roots[i]), decimal_places) for i in range(len(roots))]
     return roots
 
-
-
 def checking_roots(filename, decimal_places):
     """
     Obtain roots from the julia implementation in format required

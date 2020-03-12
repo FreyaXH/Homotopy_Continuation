@@ -231,6 +231,82 @@ def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, 
         
     return cost_function_min
 
+def random_homotopy(input_variables, N_random = 100, num_steps_homotopy = 5, remainder_tolerance = 0.001, \
+                     tolerance_zero = 1e-10, decimal_places = 5, matrix_substitution = True,\
+                     matrix_A = A3, det_matrix = det_3by3_matrix, inverse_matrix = inverse_3by3_matrix, newton_ratio_accuracy = 1e-5, max_newton_step = 50,
+                     file_name = 'Random_Homotopy'):
+    """
+    Finds the minima of a potential given the first derivative of the potential. 
+    
+    Returns:
+        All the real minima of a potential
+        All the sum squares of the potential
+        The ratio of the different elements for each root
+        The eigenvalues of the potential related to the minima
+        The global minima
+    """
+    time_start = time.time()
+    N = 0
+    parameters_guess_all = []
+    minima_found_all = []
+    eigenvalues_minima_square_all = []
+    
+    while N < N_random:
+        
+        N += 1
+        parameters_guess = [np.random.uniform(-0.1e5, 0.1e5), np.random.uniform(-0.1e5,0.1e5), np.random.uniform(-0.1e5,0.1e5),\
+             np.random.uniform(0.1,6), np.random.uniform(0.1,6), np.random.uniform(0.1,6), np.random.uniform(-4*np.pi,4*np.pi), np.random.uniform(-8,4*np.pi),\
+             np.random.uniform(-8,4*np.pi), np.random.uniform(-4*np.pi,4*np.pi), np.random.uniform(-4*np.pi , 8), np.random.uniform(-4*np.pi, 8),\
+             np.random.uniform(-1.5e5,1.5e5), np.random.uniform(-1.5e5, 1.5e5) , np.random.uniform(-4e5,-0.1)]
+        
+        parameters_guess_all.append(parameters_guess)
+        diff_V = THDM_diff(input_variables, *parameters_guess)
+        
+        real_roots = Homotopy_Continuation(t, input_variables, diff_V, number_of_steps=num_steps_homotopy, remainder_tolerance=remainder_tolerance,\
+                                           tolerance_zero=tolerance_zero, decimal_places=decimal_places,\
+                                           matrix_substitution=matrix_substitution, matrix_A=matrix_A, det_matrix=det_matrix\
+                                           ,inverse_matrix=inverse_matrix, newton_ratio_accuracy = newton_ratio_accuracy, max_newton_step = max_newton_step,\
+                                           save_file = False)
+        
+        if len(real_roots) == 0:
+            eigenvalues_minima_square = 0
+            minima_points = 0
+        else:
+            #eigenvalues of each minima found
+            eigenvalues_all_real_roots_square = [potential_eigenvalues(input_variables, real_roots[i], diff_V) for i in range(len(real_roots))]
+              
+            #find the real positive eigenvalues 
+            index_min_position = [j for j in range(len(eigenvalues_all_real_roots_square)) if all(i>0 for i in eigenvalues_all_real_roots_square[j]) is True]
+            
+            if len(index_min_position) == 0:
+                eigenvalues_minima_square = 0
+                minima_points = 0
+            else:
+                #slicing roots and eigenvalues accordingly
+                minima_points = [real_roots[i] for i in index_min_position]
+                eigenvalues_minima_square = [eigenvalues_all_real_roots_square[i] for i in index_min_position]
+        minima_found_all.append(minima_points)
+        eigenvalues_minima_square_all.append(eigenvalues_minima_square)
+    
+    time_end = time.time()
+    print('Time taken to run : \n{} s'.format(time_end - time_start))
+    
+    #save information into csv file
+    other_info = ['Time Taken'] + [time_end - time_start] + ['']
+    
+    total_length = max(len(other_info), len(minima_found_all))
+    
+    other_info = other_info + list(np.full(total_length - len(other_info), ''))
+       
+    eigenvalues_minima_square_all_s = list(eigenvalues_minima_square_all) + list(np.full(total_length - len(minima_found_all), ''))
+    minima_found_all_s = minima_found_all + list(np.full(total_length - len(minima_found_all), ''))
+    parameters_guess_all_s = parameters_guess_all + list(np.full(total_length - len(minima_found_all), ''))
+    
+    df = pd.DataFrame({'Parameters' : parameters_guess_all_s, 'Minima Found' : minima_found_all_s, 'Eigenvalues Squared of Minima': eigenvalues_minima_square_all_s, 'Other Info' : other_info})
+    df.to_csv(file_name + '.csv', index=True)
+    
+    return parameters_guess_all_s, minima_found_all_s
+
 def roots_Polynomial_conscise(input_variables, parameters_guess, num_steps_homotopy = 5, remainder_tolerance = 0.001, \
                      tolerance_zero = 1e-10, decimal_places = 5, matrix_substitution = True,\
                      matrix_A = A3, det_matrix = det_3by3_matrix, inverse_matrix = inverse_3by3_matrix, newton_ratio_accuracy = 1e-4, max_newton_step = 15):
@@ -310,7 +386,7 @@ def Iminuit_Optimize(miu_1_square, miu_2_square, miu_3_square, \
          m_12_square=m_12_square, m_23_square =m_23_square, m_31_square=m_31_square, \
          limit_miu_1_square = (0.1e5, 2e5), limit_miu_2_square = (0.1e5,2e5), limit_miu_3_square = (0.1e5, 2e5),\
          limit_lam_11 = (0.1,7), limit_lam_22 = (0.1,7), limit_lam_33 = (0.1,7), limit_lam_12 =(-4*np.pi,4*np.pi), limit_lam_23 = (-8,4*np.pi), limit_lam_31 =(-8,4*np.pi), limit_lam_dash_12=(-4*np.pi,4*np.pi), limit_lam_dash_23 =(-4*np.pi , 8), limit_lam_dash_31=(-4*np.pi, 8),\
-         limit_m_12_square=(-1.5e5,1.5e5), limit_m_23_square =(-1.5e5, 1.5e5) , limit_m_31_square=(-4e5,-0.1e5),
+         limit_m_12_square=(-1.5e5,1.5e5), limit_m_23_square = (-0.8e5, 0.25e5) , limit_m_31_square=(-4e5,-0.1e5),
          error_miu_1_square = 0.5e5, error_miu_2_square = 0.5e5, error_miu_3_square = 0.5e5,\
          error_lam_11 = 2, error_lam_22 = 2, error_lam_33 = 2, error_lam_12 =2, error_lam_23 = 2, error_lam_31 =2, error_lam_dash_12=2, error_lam_dash_23 =2, error_lam_dash_31=2,\
          error_m_12_square=0.5e5, error_m_23_square =0.5e5 , error_m_31_square=0.5e5,
@@ -352,8 +428,8 @@ def Iminuit_Optimize_Uncoupled(miu_1_square, miu_2_square, miu_3_square, \
     print(minimize_cost_function.get_fmin())
     print(minimize_cost_function.get_param_states())
     return minimize_cost_function.get_fmin(), minimize_cost_function.get_param_states(), time_end-time_start
-    
-def cost_func_scipy(parameters):
+  
+def cost_func_param_array(parameters):
     """
     Computes the cost function for the potential for a given set of paramters
     """
