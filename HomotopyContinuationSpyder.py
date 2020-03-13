@@ -333,7 +333,7 @@ def roots_Polynomial_conscise(input_variables, parameters_guess, num_steps_homot
     else:
         #eigenvalues of each minima found
         eigenvalues_all_real_roots_square = [potential_eigenvalues(input_variables, real_roots[i], diff_V) for i in range(len(real_roots))]
-          
+
         #find the real positive eigenvalues 
         index_min_position = [j for j in range(len(eigenvalues_all_real_roots_square)) if all(i>0 for i in eigenvalues_all_real_roots_square[j]) is True]
         
@@ -345,20 +345,18 @@ def roots_Polynomial_conscise(input_variables, parameters_guess, num_steps_homot
             #slicing roots and eigenvalues accordingly
             minima_points = np.array([real_roots[i] for i in index_min_position])
             eigenvalues_minima_square = [eigenvalues_all_real_roots_square[i] for i in index_min_position]
-            
             #find the ratio between the roots
             square_roots = np.square(minima_points)
             square_roots_sort = np.sort(square_roots)
             roots_ratio = [abs(((min_pt_i[2]/min_pt_i[2]) - 130**2)/130**2) + abs(((min_pt_i[1]/min_pt_i[0]) - 420**2)/420**2) + abs(((min_pt_i[2]/min_pt_i[0]) - 57300**2)/57300**2) for min_pt_i in square_roots_sort]
-            print(roots_ratio)
+
             sum_square_minima = [sum(square_roots_i) for square_roots_i in square_roots]
            
             #find the cloest eigenvalue to 125
             closest_eigenvalue_per_min = np.array([min(abs((np.array(i) - 125**2))/125**2) for i in eigenvalues_minima_square])
-            print(closest_eigenvalue_per_min)
             #find closest sum square root to 246
             closest_sum_square_per_min = abs(np.array(sum_square_minima) - 246**2)/246**2
-            print(closest_sum_square_per_min)
+
             cost_function_min = min((closest_eigenvalue_per_min + closest_sum_square_per_min + roots_ratio))
                     
     return cost_function_min
@@ -428,7 +426,79 @@ def Iminuit_Optimize_Uncoupled(miu_1_square, miu_2_square, miu_3_square, \
     print(minimize_cost_function.get_fmin())
     print(minimize_cost_function.get_param_states())
     return minimize_cost_function.get_fmin(), minimize_cost_function.get_param_states(), time_end-time_start
+    
+def find_minima(input_variables, parameters_guess, num_steps_homotopy = 5, remainder_tolerance = 0.001, \
+                     tolerance_zero = 1e-10, decimal_places = 5, matrix_substitution = True,\
+                     matrix_A = A3, det_matrix = det_3by3_matrix, inverse_matrix = inverse_3by3_matrix, newton_ratio_accuracy = 1e-4, max_newton_step = 15):
+    """
+    Finds the minima of a potential given the first derivative of the potential. 
+    
+    Returns:
+        All the real minima of a potential
+        All the sum squares of the potential
+        The ratio of the different elements for each root
+        The eigenvalues of the potential related to the minima
+        The global minima
+    """
+    diff_V = THDM_diff(input_variables, *parameters_guess)
+    
+    real_roots = Homotopy_Continuation(t, input_variables, diff_V, number_of_steps=num_steps_homotopy, remainder_tolerance=remainder_tolerance,\
+                                       tolerance_zero=tolerance_zero, decimal_places=decimal_places,\
+                                       matrix_substitution=matrix_substitution, matrix_A=matrix_A, det_matrix=det_matrix\
+                                       ,inverse_matrix=inverse_matrix, newton_ratio_accuracy = newton_ratio_accuracy, max_newton_step = max_newton_step)
+    if len(real_roots) == 0:
+            eigenvalues_minima_square = 0
+            minima_points = 0
+    else:
+        #eigenvalues of each minima found
+        eigenvalues_all_real_roots_square = [potential_eigenvalues(input_variables, real_roots[i], diff_V) for i in range(len(real_roots))]
+          
+        #find the real positive eigenvalues 
+        index_min_position = [j for j in range(len(eigenvalues_all_real_roots_square)) if all(i>0 for i in eigenvalues_all_real_roots_square[j]) is True]
+        
+        if len(index_min_position) == 0:
+            eigenvalues_minima_square = 0
+            minima_points = 0
+        else:
+            #slicing roots and eigenvalues accordingly
+            minima_points = [real_roots[i] for i in index_min_position]
+            eigenvalues_minima_square = [eigenvalues_all_real_roots_square[i] for i in index_min_position]
+
+    return minima_points, eigenvalues_minima_square
   
+def roots_Polynomial_Genetic(parameters_guess):
+    """
+    Finds the minima of a potential given the first derivative of the potential. 
+    
+    Returns:
+        All the real minima of a potential
+        All the sum squares of the potential
+        The ratio of the different elements for each root
+        The eigenvalues of the potential related to the minima
+        The global minima
+    """   
+    minima_points, eigenvalues_minima_square = find_minima([x,y,z], parameters_guess)
+    
+    if minima_points == 0:
+        cost_function_min = 10000
+        
+    else:
+        #find the ratio between the roots
+        square_roots = np.square(minima_points)
+        square_roots_sort = np.sort(square_roots)
+        roots_ratio = [abs(((min_pt_i[2]/min_pt_i[2]) - 130**2)/130**2) + abs(((min_pt_i[1]/min_pt_i[0]) - 420**2)/420**2) + abs(((min_pt_i[2]/min_pt_i[0]) - 57300**2)/57300**2) for min_pt_i in square_roots_sort]
+
+        sum_square_minima = [sum(square_roots_i) for square_roots_i in square_roots]
+       
+        #find the cloest eigenvalue to 125
+        closest_eigenvalue_per_min = np.array([min(abs((np.array(i) - 125**2))/125**2) for i in eigenvalues_minima_square])
+        #find closest sum square root to 246
+        closest_sum_square_per_min = abs(np.array(sum_square_minima) - 246**2)/246**2
+
+        cost_function_min = min((closest_eigenvalue_per_min + closest_sum_square_per_min + roots_ratio))
+                
+    return cost_function_min, minima_points, eigenvalues_minima_square
+
 def cost_func_param_array(parameters):
     """
     Computes the cost function for the potential for a given set of paramters

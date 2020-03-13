@@ -11,10 +11,15 @@ import sympy as sy
 import time
 from multiprocessing import Pool
 import HomotopyContinuationSpyder as HCS
+import pandas as pd
 
-def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, tolerance = 0.1, survival_prob = 0.1):
+def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, tolerance = 0.1, survival_prob = 0.1\
+                      ,file_name = 'Genetic_Roots'):
     time_start = time.time()
     
+    all_minima = []
+    all_eigenvalues = []
+    all_parameters = []
     #select random parents
     parents = []
     mutation_factor = []
@@ -70,16 +75,41 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
         if __name__ == '__main__':
             p = Pool(4) # this core spliting thing I have to test it more
             time_cost_start = time.time()
-            cost_value = p.map(HCS.cost_func_param_array, whole_generation)
-            time_cost_end = time.time()
-            
-            print('Time for Costs : {}'.format(time_cost_end - time_cost_start))
-            print(cost_value)
-            index = np.argpartition(cost_value, num_of_parents)
-            parents = whole_generation[index[:num_of_parents]]
+            unpack_solutions = p.map(HCS.roots_Polynomial_Genetic, whole_generation)
+        unpack_solutions_array = np.array(unpack_solutions)
+        print(unpack_solutions_array[:,1])
+        all_minima_holder = np.concatenate((all_minima, unpack_solutions_array[:,1]), axis =0)
+        all_eigenvalues_holder = np.concatenate((all_eigenvalues, unpack_solutions_array[:,2]), axis =0)
+        all_parameters_holder = np.concatenate((all_parameters, whole_generation), axis =0)
+        cost_value = unpack_solutions_array[:,0]
+        
+        time_cost_end = time.time()
+        all_minima = all_minima_holder
+        all_eigenvalues = all_eigenvalues_holder
+        all_parameters = all_parameters_holder
+        
+        print('Time for Costs : {}'.format(time_cost_end - time_cost_start))
+        print(cost_value)
+        index = np.argpartition(cost_value, num_of_parents)
+        parents = whole_generation[index[:num_of_parents]]
         count += 1  
         
     time_end = time.time()
     #print(min(cost_value))
     print('Total Time : {}'.format(time_end-time_start))
+    
+    #save information into csv file
+    other_info = ['Time Taken'] + [time_end - time_start] + ['']
+    
+    total_length = max(len(other_info), len(all_minima))
+    
+    other_info = other_info + list(np.full(total_length - len(other_info), ''))
+       
+    eigenvalues_minima_square_all_s = list(all_eigenvalues) + list(np.full(total_length - len(all_minima), ''))
+    minima_found_all_s = list(all_minima) + list(np.full(total_length - len(all_minima), ''))
+    parameters_guess_all_s = all_parameters + list(np.full(total_length - len(all_minima), ''))
+    
+    df = pd.DataFrame({'Parameters' : parameters_guess_all_s, 'Minima Found' : minima_found_all_s, 'Eigenvalues Squared of Minima': eigenvalues_minima_square_all_s, 'Other Info' : other_info})
+    df.to_csv(file_name + '.csv', index=True)
+    
     return min(cost_value)
