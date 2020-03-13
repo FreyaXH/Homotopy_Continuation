@@ -6,8 +6,7 @@ from multiprocessing import Pool
 import HomotopyContinuationSpyder as HCS
 import pandas as pd
 
-def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, tolerance = 0.1, survival_prob = 0.1\
-                      ,file_name = 'Genetic_Roots'):
+def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, tolerance = 0.1, survival_prob = 0.1,file_name = 'Genetic_Roots'):
     time_start = time.time()
    
     all_minima = [np.NaN]
@@ -47,7 +46,7 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
                     else:
                         each_new_generation[i][j] = parents[i][j]
             whole_generation =  np.concatenate((whole_generation,each_new_generation), axis=0)
-       
+            
             mutation_number +=1
         time_mutations_end = time.time()
         print('Time for Mutations : {}'.format(time_mutations_end - time_mutations_start))
@@ -58,8 +57,9 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
             unpack_solutions = p.map(HCS.roots_Polynomial_Genetic, whole_generation)
            
         unpack_solutions_array = np.array(unpack_solutions)
+        print((all_minima, unpack_solutions_array[:,1]))
         all_parameters_holder = np.concatenate((all_parameters, whole_generation), axis =0)
-        print(unpack_solutions_array[:,1])
+
         all_minima_holder = np.concatenate((all_minima, unpack_solutions_array[:,1]), axis =0)
         '''
         for j in range(len(whole_generation)):
@@ -70,7 +70,7 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
                 all_eigenvalues_holder = np.concatenate((all_eigenvalues, new_eigenvalues), axis =0)
         '''
         cost_value = unpack_solutions_array[:,0]
-        print(cost_value)
+        
        
         time_cost_end = time.time()
         all_minima = all_minima_holder
@@ -81,31 +81,30 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
 
         index = np.argpartition(cost_value, num_of_parents)
         parents = whole_generation[index[:num_of_parents]]
-        count += 1  
- 
-    time_end = time.time()
-    #print(min(cost_value))
-    print('Total Time : {}'.format(time_end-time_start))
-   
-    #save information into csv file
-    other_info = ['Time Taken'] + [time_end - time_start] + ['']
+        count += 1   
+        time_end = time.time()
+        #save information into csv file
+        print('Total Time : {}'.format(time_end-time_start))
+        other_info = ['Time Taken'] + [time_end - time_start] + ['']
        
-    #all_eigenvalues.pop(0)
+        #all_eigenvalues.pop(0)
    
 
-    total_length = max(len(other_info), len(all_minima))
+        total_length = max(len(other_info), len(all_minima))
    
-    other_info = other_info + list(np.full(total_length - len(other_info), ''))
+        other_info = other_info + list(np.full(total_length - len(other_info), ''))
        
-    #eigenvalues_minima_square_all_s = list(all_eigenvalues) + list(np.full(total_length - len(all_minima), ''))
-    minima_found_all_s = list(all_minima) + list(np.full(total_length - len(all_minima), ''))
-    parameters_guess_all_s = list(all_parameters) + list(np.full(total_length - len(all_minima), ''))
-    cost_func_value = ['']+ list(cost_value) + list(np.full(total_length - len(cost_value)-1, ''))
-    print(cost_value)
-    print(len(cost_func_value))
-    print(len(all_minima))
-    print(len(minima_found_all_s))
-    df = pd.DataFrame({'Parameters' : parameters_guess_all_s, 'Minima Found' : minima_found_all_s, 'Cost Function Values':cost_func_value, 'Other Info' : other_info})
-    df.to_csv(file_name + '.csv', index=True)
+        #eigenvalues_minima_square_all_s = list(all_eigenvalues) + list(np.full(total_length - len(all_minima), ''))
+        minima_found_all_s = list(all_minima) + list(np.full(total_length - len(all_minima), ''))
+        parameters_guess_all_s = list(all_parameters) + list(np.full(total_length - len(all_minima), ''))
+        cost_func_value = ['']+ list(cost_value) + list(np.full(total_length - len(cost_value)-1, ''))
+
+        df = pd.DataFrame({'Parameters' : parameters_guess_all_s, 'Minima Found' : minima_found_all_s, 'Cost Function Values':cost_func_value, 'Other Info' : other_info})
+        df.to_csv(file_name + str(count) + '.csv', index=True) 
+   
+        #print(min(cost_value))
+    
+   
+
    
     return min(cost_value)
