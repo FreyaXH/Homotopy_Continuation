@@ -72,15 +72,17 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
             mutation_number +=1
         time_mutations_end = time.time()
         print('Time for Mutations : {}'.format(time_mutations_end - time_mutations_start))
+        
         if __name__ == '__main__':
             p = Pool(4) # this core spliting thing I have to test it more
             time_cost_start = time.time()
             unpack_solutions = p.map(HCS.roots_Polynomial_Genetic, whole_generation)
+            
         unpack_solutions_array = np.array(unpack_solutions)
-        print(unpack_solutions_array[:,1])
-        all_minima_holder = np.concatenate((all_minima, unpack_solutions_array[:,1]), axis =0)
-        all_eigenvalues_holder = np.concatenate((all_eigenvalues, unpack_solutions_array[:,2]), axis =0)
+        
+        print(np.concatenate((all_minima, unpack_solutions_array[:,1]), axis =0))
         all_parameters_holder = np.concatenate((all_parameters, whole_generation), axis =0)
+        all_eigenvalues_holder = np.concatenate((all_eigenvalues, unpack_solutions_array[:,2]), axis =0)
         cost_value = unpack_solutions_array[:,0]
         
         time_cost_end = time.time()
