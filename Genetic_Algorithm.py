@@ -1,40 +1,39 @@
 #import functions
 import numpy as np
-import sympy as sy
 import time
 from multiprocessing import Pool
-import HomotopyContinuationSpyder as HCS
 import ThreeHiggsModel_Analayse as THMA
 import pandas as pd
 
-def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, tolerance = 0.1, survival_prob = 0.1,file_name = 'Genetic_Roots'):
+def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, tolerence_avrg = 0.1, tolerence_std=0.1 , survival_prob = 0.1,file_name = 'Genetic_Roots'):
     time_start = time.time()
    
     all_minima = [np.NaN]
     all_parameters = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]
-    
     #select random parents
     parents = []
     mutation_factor = []
     time_start_generate = time.time()
-    
     for i in range(num_of_parents):
         parents.append([np.random.uniform(1e4,2e5), np.random.uniform(1e4,2e5), np.random.uniform(1e4,2e5), np.random.uniform(0,7), np.random.uniform(0,7), \
                         np.random.uniform(0,7), np.random.uniform(-4*np.pi,4*np.pi), \
                  np.random.uniform(-8,4*np.pi), np.random.uniform(-8,4*np.pi), np.random.uniform(-4*np.pi,4*np.pi), np.random.uniform(-4*np.pi,8), \
                  np.random.uniform(-4*np.pi,8), np.random.uniform(-1.5e5,1.5e5), np.random.uniform(-0.8e5,0.25e5), np.random.uniform(-4e5,0)])        
-    
     time_end_generate = time.time()
-    
     print('Time to Generate: {}'.format(time_end_generate - time_start_generate))
-    
     cost_value = ['']
     survival_possibility = survival_prob
-   
+    if __name__ == '__main__':
+        p = Pool(4) # this core spliting thing I have to test it more
+            
+        parents_solutions = p.map(THMA.roots_Polynomial_Genetic, parents)
     #update servivors
     #while min(cost_value) >= tolerance:  tolerance constraint
     count = 0
-    while count < num_iterations :#number of iteration constraint
+    average_cost_value =[0]
+    change_in_average = 10
+    standard_deviation = 10
+    while count < num_iterations and change_in_average > tolerence_avrg and standard_deviation > tolerence_std :#number of iteration constraint
         whole_generation = parents
         each_new_generation = np.full((num_of_parents,15),0)
         mutation_number = 0
@@ -55,29 +54,24 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
             mutation_number +=1
         time_mutations_end = time.time()
         print('Time for Mutations : {}'.format(time_mutations_end - time_mutations_start))
-       
+        print(whole_generation)
         if __name__ == '__main__':
             p = Pool(4) # this core spliting thing I have to test it more
             time_cost_start = time.time()
-            unpack_solutions = p.map(THMA.roots_Polynomial_Genetic, whole_generation)
-        print(unpack_solutions)
-           
-        unpack_solutions_array = np.array(unpack_solutions)
-        print((all_minima, unpack_solutions_array[:,1]))
+            
+            children_solutions = p.map(THMA.roots_Polynomial_Genetic, whole_generation[num_of_parents:])
+            
+
+        generation_solutions = np.concatenate((np.array(parents_solutions), np.array(children_solutions)))
         all_parameters_holder = np.concatenate((all_parameters, whole_generation), axis =0)
 
-        all_minima_holder = np.concatenate((all_minima, unpack_solutions_array[:,1]), axis =0)
-        '''
-        for j in range(len(whole_generation)):
-            print([unpack_solutions[j][2]])
-            if len(unpack_solutions[j][2]) <= 27:
-                print(np.full((27-len(unpack_solutions[j][2]),3),np.NAN))
-                new_eigenvalues = np.concatenate(np.array([unpack_solutions[j][2]]), np.full((27-len([unpack_solutions[j][2]]),3),np.NAN))                
-                all_eigenvalues_holder = np.concatenate((all_eigenvalues, new_eigenvalues), axis =0)
-        '''
-        cost_value = unpack_solutions_array[:,0]
+        all_minima_holder = np.concatenate((all_minima, generation_solutions[:,1]), axis =0)
         
-       
+        cost_value = generation_solutions[:,0]
+        average_cost_value.append(sum(cost_value)/len(cost_value))
+        standard_deviation = np.std(cost_value)
+        change_in_average = average_cost_value[-1]-average_cost_value[-2]
+        
         time_cost_end = time.time()
         all_minima = all_minima_holder
         ##all_eigenvalues = all_eigenvalues_holder
@@ -87,6 +81,7 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
 
         index = np.argpartition(cost_value, num_of_parents)
         parents = whole_generation[index[:num_of_parents]]
+        parents_solutions = generation_solutions[index[:num_of_parents]]
         count += 1   
         time_end = time.time()
         #save information into csv file
@@ -95,6 +90,7 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
        
         #all_eigenvalues.pop(0)
    
+
         total_length = max(len(other_info), len(all_minima))
    
         other_info = other_info + list(np.full(total_length - len(other_info), ''))
@@ -108,5 +104,8 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
         df.to_csv(file_name + str(count) + '.csv', index=True) 
    
         #print(min(cost_value))
-      
-    return min(cost_value)
+    
+   
+    print(change_in_average)
+   
+    return min(cost_value), standard_deviation
