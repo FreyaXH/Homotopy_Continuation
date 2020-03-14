@@ -111,7 +111,6 @@ def find_minima(input_variables, parameters_guess, num_steps_homotopy = 5, remai
           
         #find the real positive eigenvalues 
         index_min_position = [j for j in range(len(eigenvalues_all_real_roots_square)) if all(i>0 for i in eigenvalues_all_real_roots_square[j]) is True]
-        
         if len(index_min_position) == 0:
             eigenvalues_minima_square = 0
             minima_points = 0
@@ -119,7 +118,6 @@ def find_minima(input_variables, parameters_guess, num_steps_homotopy = 5, remai
             #slicing roots and eigenvalues accordingly
             minima_points = [real_roots[i] for i in index_min_position]
             eigenvalues_minima_square = [eigenvalues_all_real_roots_square[i] for i in index_min_position]
-
     return minima_points, eigenvalues_minima_square
 
 def evaluate_statistics(minima_points, eigenvalues_minima_squared):
@@ -133,10 +131,12 @@ def evaluate_statistics(minima_points, eigenvalues_minima_squared):
         The eigenvalues of the potential related to the minima
         The global minima
     """
-    if minima_points == [0]:
+    if minima_points == 0:
         roots_ratio_val = 1e6
         closest_eigenvalue_per_min_val = 1e6
         closest_sum_square_per_min_val = 1e6
+        cost_function = 1e6
+        exact_minimum = 0
     else:
             
         #find the ratio between the roots
@@ -191,17 +191,25 @@ def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, 
     if real_roots is np.NaN:
         cost_function_min = 1e6
         eigenvalues_minima_square = 0
-        minima_points = 0
+        minima_points = [0]
         global_min = 0
         sum_square_root_minima = 0
         roots_ratio = 0
+        exact_minimum = 0
+        ratio1 = 0
+        ratio2 = 0
+        ratio3 = 0
     elif len(real_roots) == 0:
         cost_function_min = 1e6
         eigenvalues_minima_square = 0
-        minima_points = 0
+        minima_points = [0]
         global_min = 0
         sum_square_root_minima = 0
         roots_ratio = 0
+        exact_minimum = 0
+        ratio1 = 0
+        ratio2 = 0
+        ratio3 = 0
     else:
         #eigenvalues of each minima found
         eigenvalues_all_real_roots_square = [potential_eigenvalues(input_variables, real_roots[i], diff_V) for i in range(len(real_roots))]
@@ -215,7 +223,11 @@ def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, 
             sum_square_root_minima = 0
             roots_ratio = 0
             eigenvalues_minima = 0
-            minima_points = 0
+            minima_points = [0]
+            exact_minimum = 0
+            ratio1 = 0
+            ratio2 = 0
+            ratio3 = 0
         else:
             
             #slicing roots and eigenvalues accordingly
@@ -239,7 +251,6 @@ def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, 
            
             #global minima position
             global_min = minima_points[global_index]
-                   
         if debug:
             print('Number of Real Roots Found: \n{}\n'.format(len(real_roots)))
             print('Positions of the Minima : \n{}\n'.format(minima_points))
@@ -254,9 +265,10 @@ def roots_Polynomial(input_variables, parameters_guess, num_steps_homotopy = 5, 
         
         if save_file is True:
             #save information into csv file
+            print(real_roots)
             other_info =  ['Cost Function Min'] + [cost_function_min] + [''] + ['Global Minima'] + [global_min] + [''] +\
             ['Time Taken'] + [time_end - time_start] + [''] + ['Number of Real Roots Found'] + [len(real_roots)] \
-            + [''] + ['Number of Minima'] + [len(minima_points)] + ['Exact Minima'] + [exact_minimum] + [''] + ['Eigenvalue Squared'] + [eigenvalues_minima] + [''] +\
+            + [''] + ['Exact Minima'] + [exact_minimum] + [''] + ['Eigenvalue Squared'] + [eigenvalues_minima] + [''] +\
             ['Sum Squared Minima'] + [sum_square_root_minima] 
             
             ratios = ['Ratio of V3 to V2'] + [ratio1] + [''] + ['Ratio of V2 to V1'] + [ratio2] + [''] +\
@@ -303,7 +315,6 @@ def random_homotopy(input_variables, N_random = 100, num_steps_homotopy = 5, rem
              np.random.uniform(0.1,6), np.random.uniform(0.1,6), np.random.uniform(0.1,6), np.random.uniform(-4*np.pi,4*np.pi), np.random.uniform(-8,4*np.pi),\
              np.random.uniform(-8,4*np.pi), np.random.uniform(-4*np.pi,4*np.pi), np.random.uniform(-4*np.pi , 8), np.random.uniform(-4*np.pi, 8),\
              np.random.uniform(-1.5e5,1.5e5), np.random.uniform(-1.5e5, 1.5e5) , np.random.uniform(-4e5,-0.1)]
-        
         minima_points, eigenvalues_minima_square = find_minima(input_variables, parameters_guess)
         parameters_guess_all.append(parameters_guess)
         

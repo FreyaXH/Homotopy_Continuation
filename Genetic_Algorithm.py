@@ -23,10 +23,9 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
     print('Time to Generate: {}'.format(time_end_generate - time_start_generate))
     cost_value = ['']
     survival_possibility = survival_prob
-    if __name__ == '__main__':
-        p = Pool(4) # this core spliting thing I have to test it more
-            
-        parents_solutions = p.map(THMA.roots_Polynomial_Genetic, parents)
+    
+    p = Pool(4) # this core spliting thing I have to test it more
+    parents_solutions = p.map(THMA.roots_Polynomial_Genetic, parents)
     #update servivors
     #while min(cost_value) >= tolerance:  tolerance constraint
     count = 0
@@ -55,11 +54,11 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
         time_mutations_end = time.time()
         print('Time for Mutations : {}'.format(time_mutations_end - time_mutations_start))
         print(whole_generation)
-        if __name__ == '__main__':
-            p = Pool(4) # this core spliting thing I have to test it more
-            time_cost_start = time.time()
-            
-            children_solutions = p.map(THMA.roots_Polynomial_Genetic, whole_generation[num_of_parents:])
+        
+        p2 = Pool(4) # this core spliting thing I have to test it more
+        time_cost_start = time.time()
+
+        children_solutions = p2.map(THMA.roots_Polynomial_Genetic, whole_generation[num_of_parents:])
             
 
         generation_solutions = np.concatenate((np.array(parents_solutions), np.array(children_solutions)))
