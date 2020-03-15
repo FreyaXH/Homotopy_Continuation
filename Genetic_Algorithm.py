@@ -5,7 +5,7 @@ from multiprocessing import Pool
 import ThreeHiggsModel_Analayse as THMA
 import pandas as pd
 
-def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, tolerence_avrg = 0.1, tolerence_std=0.1 , survival_prob = 0.1,file_name = 'Genetic_Roots'):
+def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, tolerance_avrg = 0.1, survival_prob = 0.9,file_name = 'Genetic_Roots'):
     time_start = time.time()
    
     all_minima = [np.NaN]
@@ -31,8 +31,8 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
     count = 0
     average_cost_value =[0]
     change_in_average = 10
-    standard_deviation = 10
-    while count < num_iterations and change_in_average > tolerence_avrg and standard_deviation > tolerence_std :#number of iteration constraint
+    standard_deviation = 0
+    while count < num_iterations and abs(change_in_average) > tolerance_avrg:#number of iteration constraint
         whole_generation = parents
         each_new_generation = np.full((num_of_parents,15),0)
         mutation_number = 0
@@ -53,7 +53,7 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
             mutation_number +=1
         time_mutations_end = time.time()
         print('Time for Mutations : {}'.format(time_mutations_end - time_mutations_start))
-        print(whole_generation)
+
         
         p2 = Pool(4) # this core spliting thing I have to test it more
         time_cost_start = time.time()
@@ -85,7 +85,9 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
         time_end = time.time()
         #save information into csv file
         print('Total Time : {}'.format(time_end-time_start))
-        other_info = ['Time Taken'] + [time_end - time_start] + ['']
+        other_info = ['Time Taken'] + [time_end - time_start] + [''] + ['Minimum Cost Function Value'] \
+        + [min(cost_value)] + [''] +['Average of this generation'] + [average_cost_value[-1]] + [''] + ['Change in Average'] + [abs(change_in_average)] + [''] + \
+        ['Standard Deviation'] + [abs(standard_deviation)] + ['']
        
         #all_eigenvalues.pop(0)
    
@@ -103,8 +105,8 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
         df.to_csv(file_name + str(count) + '.csv', index=True) 
    
         #print(min(cost_value))
+        
+   
     
    
-    print(change_in_average)
-   
-    return min(cost_value), standard_deviation
+    return min(cost_value)
