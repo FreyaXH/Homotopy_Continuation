@@ -4,8 +4,35 @@ import time
 from multiprocessing import Pool
 import ThreeHiggsModel_Analayse as THMA
 import pandas as pd
+import ast
 
-def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, tolerance_avrg = 0.1, survival_prob = 0.9,file_name = 'Genetic_Roots'):
+def extract_parameters_Genetic(filename):
+    
+    df = pd.read_csv(filename)
+    parameters = []
+    
+    parameters_string = df['Parameters'].values[1:501]
+    
+    for string_i in parameters_string:
+        string = string_i[1:-1]
+        string = string.replace('\n','')
+        string = string.split(' ')
+        
+        parameters_i = []
+        for j in string:
+            if len(j) != 0:
+                parameters_i.append(ast.literal_eval(j))
+        
+        parameters.append(parameters_i)
+
+    return parameters
+
+#extract last generation
+parameters_last_generation = extract_parameters_Genetic('Genetic_Roots43.csv')
+
+def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, \
+                                parents_given = False, parents_last = parameters_last_generation, \
+                                tolerence_avrg = 0.1, tolerence_std=0.1 , survival_prob = 0.1,file_name = 'Genetic_Roots'):
     time_start = time.time()
    
     all_minima = [np.NaN]
@@ -13,14 +40,20 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
     #select random parents
     parents = []
     mutation_factor = []
-    time_start_generate = time.time()
-    for i in range(num_of_parents):
-        parents.append([np.random.uniform(1e4,2e5), np.random.uniform(1e4,2e5), np.random.uniform(1e4,2e5), np.random.uniform(0,7), np.random.uniform(0,7), \
-                        np.random.uniform(0,7), np.random.uniform(-4*np.pi,4*np.pi), \
-                 np.random.uniform(-8,4*np.pi), np.random.uniform(-8,4*np.pi), np.random.uniform(-4*np.pi,4*np.pi), np.random.uniform(-4*np.pi,8), \
-                 np.random.uniform(-4*np.pi,8), np.random.uniform(-1.5e5,1.5e5), np.random.uniform(-0.8e5,0.25e5), np.random.uniform(-4e5,0)])        
-    time_end_generate = time.time()
-    print('Time to Generate: {}'.format(time_end_generate - time_start_generate))
+    
+    if parents_given is False:
+        time_start_generate = time.time()
+        for i in range(num_of_parents):
+            parents.append([np.random.uniform(1e4,2e5), np.random.uniform(1e4,2e5), np.random.uniform(1e4,2e5), np.random.uniform(0,7), np.random.uniform(0,7), \
+                            np.random.uniform(0,7), np.random.uniform(-4*np.pi,4*np.pi), \
+                     np.random.uniform(-8,4*np.pi), np.random.uniform(-8,4*np.pi), np.random.uniform(-4*np.pi,4*np.pi), np.random.uniform(-4*np.pi,8), \
+                     np.random.uniform(-4*np.pi,8), np.random.uniform(-1.5e5,1.5e5), np.random.uniform(-0.8e5,0.25e5), np.random.uniform(-4e5,0)])        
+        time_end_generate = time.time()
+        print('Time to Generate: {}'.format(time_end_generate - time_start_generate))
+    else:
+        parents = parents_last
+        
+    print(parents[0])
     cost_value = ['']
     survival_possibility = survival_prob
     
