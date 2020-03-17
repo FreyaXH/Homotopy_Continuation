@@ -11,7 +11,7 @@ def extract_parameters_Genetic(filename):
     df = pd.read_csv(filename)
     parameters = []
     
-    parameters_string = df['Parameters'].values[1:501]
+    parameters_string = df['Parameters'].values[42501:43001]
     
     for string_i in parameters_string:
         string = string_i[1:-1]
@@ -32,7 +32,7 @@ parameters_last_generation = extract_parameters_Genetic('Genetic_Roots43.csv')
 
 def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, \
                                 parents_given = False, parents_last = parameters_last_generation, \
-                                tolerence_avrg = 0.1, tolerence_std=0.1 , survival_prob = 0.1,file_name = 'Genetic_Roots'):
+                                tolerance_avrg = 0.1, survival_prob = 0.1,file_name = 'Genetic_Roots'):
     time_start = time.time()
    
     all_minima = [np.NaN]
@@ -53,7 +53,7 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
     else:
         parents = parents_last
         
-    print(parents[0])
+
     cost_value = ['']
     survival_possibility = survival_prob
     
