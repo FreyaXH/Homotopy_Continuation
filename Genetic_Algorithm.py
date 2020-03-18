@@ -30,11 +30,10 @@ def extract_parameters_Genetic(filename):
 #extract last generation
 parameters_last_generation = extract_parameters_Genetic('Genetic_Roots43.csv')
 
-def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, \
-                                parents_given = False, parents_last = parameters_last_generation, \
-                                tolerance_avrg = 0.1, survival_prob = 0.1,file_name = 'Genetic_Roots'):
+def Genetic_Algorithm(num_of_parents = 500, num_iterations = 3, num_of_mutations = 1, \
+                                parents_given = True, parents_last = parameters_last_generation, \
+                                tolerance_avrg = 1e-5, survival_prob = 0.9,file_name = 'Genetic_Roots_Test'):
     time_start = time.time()
-   
     all_minima = [np.NaN]
     all_parameters = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]
     #select random parents
@@ -52,10 +51,9 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
         print('Time to Generate: {}'.format(time_end_generate - time_start_generate))
     else:
         parents = parents_last
-        
 
     cost_value = ['']
-    survival_possibility = survival_prob
+
     
     p = Pool(4) # this core spliting thing I have to test it more
     parents_solutions = p.map(THMA.roots_Polynomial_Genetic, parents)
@@ -63,9 +61,14 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
     #while min(cost_value) >= tolerance:  tolerance constraint
     count = 0
     average_cost_value =[0]
-    change_in_average = 10
+    change_in_average = 0.02
     standard_deviation = 0
+    print("here")
     while count < num_iterations and abs(change_in_average) > tolerance_avrg:#number of iteration constraint
+        if abs(change_in_average) <= 0.1:
+            survival_possibility = survival_prob - 0.2
+        else:
+            survival_possibility = survival_prob
         whole_generation = parents
         each_new_generation = np.full((num_of_parents,15),0)
         mutation_number = 0
@@ -75,7 +78,7 @@ def Genetic_Algorithm(num_of_parents, num_iterations = 5, num_of_mutations = 5, 
         while mutation_number < num_of_mutations:
             for i in range(num_of_parents):
                 for j in range(15):
-                    mutation_factor = np.random.uniform(0,2)
+                    mutation_factor = np.random.uniform(-2,2)
                     mutation_probability = np.random.uniform(0,1)
                     if survival_possibility < mutation_probability:
                         each_new_generation[i][j] = parents[i][j]*mutation_factor

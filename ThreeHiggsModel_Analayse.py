@@ -154,7 +154,7 @@ def evaluate_statistics(minima_points, eigenvalues_minima_squared):
         #find closest sum square root to 246
         closest_sum_square_per_min = abs((sum_square_minima - 246**2)/(sum_square_minima + 246**2))
         
-        cost_function_array = roots_ratio + closest_eigenvalue_per_min + closest_sum_square_per_min
+        cost_function_array = roots_ratio + 3*closest_eigenvalue_per_min + closest_sum_square_per_min
         cost_function = min(cost_function_array)
         
         index_sum = list(cost_function_array).index(cost_function)
@@ -442,9 +442,14 @@ def roots_Polynomial_Genetic(parameters_guess):
         The eigenvalues of the potential related to the minima
         The global minima
     """   
-    minima_points, eigenvalues_minima_squared = find_minima([x,y,z], parameters_guess)
-    exact_minimum, cost_function, roots_ratio_val, closest_eigenvalue_per_min_val, closest_sum_square_per_min_val = \
-    evaluate_statistics(minima_points, eigenvalues_minima_squared)
+    fault = np.random.uniform(0,1)
+    try:
+        minima_points, eigenvalues_minima_squared = find_minima([x,y,z], parameters_guess)
+        exact_minimum, cost_function, roots_ratio_val, closest_eigenvalue_per_min_val, closest_sum_square_per_min_val = \
+        evaluate_statistics(minima_points, eigenvalues_minima_squared)
+    except ValueError:
+        df_error = pd.DataFrame({'Parameters': list(parameters_guess)})
+        df_error.to_csv('Faulty Paramter' + str(fault) + '.csv', index = True)
     
     return cost_function, minima_points, eigenvalues_minima_squared
 
