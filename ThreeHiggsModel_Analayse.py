@@ -142,10 +142,23 @@ def evaluate_statistics(minima_points, eigenvalues_minima_squared):
         #find the ratio between the roots
         square_roots = np.square(minima_points)
         square_roots_sort = np.sort(square_roots)
-         
-        roots_ratio = [abs(np.exp(-1*(((min_pt_i[2]/min_pt_i[1]) - 130**2)/130**2)) - 1) + abs(np.exp(-1*(((min_pt_i[1]/min_pt_i[0]) - 420**2)/420**2)) - 1) \
-                       + abs(np.exp(-1*(((min_pt_i[2]/min_pt_i[0]) - 57300**2)/57300**2)) - 1) for min_pt_i in square_roots_sort]
+        
+        roots_ratio = []
+        
+        for min_pt_i in square_roots_sort:
+            
+            if min_pt_i[1] == 0 or min_pt_i[0] == 0:
+                min_pt_i[1] += 1e-6 
+                min_pt_i[0] += 1e-6 
+                min_pt_i[2] += 1e-6
+            
+            ratio_32 = min_pt_i[2]/min_pt_i[1]
+            ratio_21 = min_pt_i[1]/min_pt_i[0]
+            ratio_31 = min_pt_i[2]/min_pt_i[0]
 
+            roots_ratio.append(abs(np.exp(-1*((ratio_32 - 130**2)/130**2)) - 1) + abs(np.exp(-1*((ratio_21 - 420**2)/420**2)) - 1) \
+                           + abs(np.exp(-1*((ratio_31 - 57300**2)/57300**2)) - 1))
+            
         sum_square_minima = np.array([sum(square_roots_i) for square_roots_i in square_roots])
         
         #find the cloest eigenvalue to 125
